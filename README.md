@@ -9,14 +9,14 @@ In topic-strict group chats, offtopic posts attract replies before moderators no
 ## How it works (short)
 
 1. Moderator selects offtopic messages in the **source** chat and forwards them to the **target** chat.
-2. The bot recognizes those forwards, posts a thread header in the target, re-forwards replies into that thread, and deletes the temporary forwards.
+2. The bot recognizes those forwards, posts a thread header in the target, copies the other messages into that thread (each one keeps its author’s name at the end of the text), and deletes the temporary forwards.
 3. The bot deletes the originals in the source and posts a notice with a link to the new thread.
 
 See [docs/workflows.md](docs/workflows.md) for full scenarios, including “no loose messages in target chat” enforcement.
 
 ## Status
 
-**M1 + M1.5 packaging:** Persistence (PGlite/Postgres), `/pair` commands, Docker image, Helm chart ([bjw-s app-template](https://bjw-s-labs.github.io/helm-charts/docs/app-template/)), Test DC harness scaffold. Flow A relocate is next — [docs/roadmap.md](docs/roadmap.md).
+**M2 Flow A:** A forward from the linked source into the target becomes a reply thread (header, copied replies, deletes, source notice). `A1`–`A3` run in CI against a local Bot API stub. A manual Test DC walkthrough is still the release check — [docs/testing.md](docs/testing.md#manual-a1-until-m5-automation).
 
 ## Stack
 
@@ -43,7 +43,7 @@ nub run test
 nub run dev            # long polling + GET /health on PORT (default 3000)
 ```
 
-Useful scripts: `nub run typecheck`, `nub run lint`, `nub run i18n:extract`, `nub run i18n:compile`, `nub run build` / `nub run start`. Nub loads `.env` automatically when running scripts/files.
+Useful scripts: `nub run typecheck`, `nub run lint`, `nub run i18n:extract`, `nub run i18n:compile`, `nub run db:studio` (local PGlite at `file:./data/threadifier-pg` unless `DATABASE_URL` is a Postgres URL), `nub run build` / `nub run start`. Nub loads `.env` automatically when running scripts/files.
 
 Operators bind chats with `/pair` / `/unpair` / `/status` (or `SOURCE_CHAT_ID` / `TARGET_CHAT_ID`) until the Mini App (M4).
 
@@ -93,6 +93,8 @@ Typical requirements (exact set finalized during implementation):
 - Read messages in source and target (membership + privacy mode off / group privacy as needed)
 - Delete messages in both chats
 - Post messages (including HTML links) in both chats
-- Forward messages into threads in the target chat
+- Copy messages into the target thread (`copyMessage`)
 
-The bot account must be an admin (or have sufficient rights) in both chats.
+The bot account must be an admin (or have sufficient rights) in both chats. The target should be a supergroup, not a forum: the thread is a reply thread on the header message.
+
+Anyone who can forward source messages into the target starts a relocate, so keep that chat to moderators.

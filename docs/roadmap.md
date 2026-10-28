@@ -25,6 +25,7 @@ Granular milestones. Order is dependency-aware; checkboxes are for tracking impl
 - [x] Drizzle schema + Kit migrations for `messages`, `chat_pairs`, `threads` (+ optional `relocation_jobs`)
 - [x] Postgres dialect boot: PGlite (local default) + Postgres URL (Helm/prod)
 - [x] GrammY middleware: upsert messages from configured chats
+- [x] Remap stored chat ids on group → supergroup upgrade (`migrate_to_chat_id` / `migrate_from_chat_id`)
 - [x] Temporary chat-pair config until Mini App: **env seed** (`SOURCE_CHAT_ID` / `TARGET_CHAT_ID`) **and** operator slash commands (`/pair`, `/unpair`, `/status`) that persist to `chat_pairs`
 - [x] Unit tests for fingerprint / truncation helpers
 - [x] Integration scaffold: PGlite persistence smoke (Bot API emulator HTTP wiring deferred to M2 Flow A scenarios)
@@ -47,18 +48,18 @@ Moved earlier so Flow A/B work can be exercised on a real cluster / Test DC with
 
 ## M2 — Flow A core (relocate)
 
-- [ ] Detect forwards into `targetChat` and match to stored `sourceChat` messages
-- [ ] Batch grouping for multi-forward / media groups
-- [ ] Post thread header with HTML / Lingui template
-- [ ] Build and embed thread deep link (`?thread=`)
-- [ ] Forward remaining messages into the thread
-- [ ] Delete trigger forwards in target
-- [ ] Delete originals in source
-- [ ] Post source redirect notice
-- [ ] Phase/job state machine with safe abort on match failure
-- [ ] Title resolution without AI (truncate message text → `{threadTitle}` / `{topicLabel}`)
-- [ ] Integration scenarios: `A1` / `A2` / `A3` (emulator depth)
-- [ ] Manual Test DC walkthrough for `A1` green
+- [x] Detect forwards into `targetChat` and match to stored `sourceChat` messages
+- [x] Batch grouping for multi-forward / media groups
+- [x] Post thread header with HTML / Lingui template
+- [x] Build and embed thread deep link (`?thread=`)
+- [x] Forward remaining messages into the thread
+- [x] Delete trigger forwards in target
+- [x] Delete originals in source
+- [x] Post source redirect notice
+- [x] Phase/job state machine with safe abort on match failure
+- [x] Title resolution without AI (truncate message text → `{threadTitle}` / `{topicLabel}`)
+- [x] Integration scenarios: `A1` / `A2` / `A3` (emulator depth)
+- [ ] Manual Test DC walkthrough for `A1` green (steps in [testing.md](testing.md#manual-a1-until-m5-automation); not run in CI)
 
 **Exit:** Moderator forward → full relocate + notice; emulator scenarios + manual Test DC happy path.
 
@@ -124,4 +125,4 @@ Do not start M6 items until M2–M5 priorities are met unless product urgency sa
 
 ## Suggested first implementation slice
 
-**M0 + M1 + M1.5 packaging**, then **M2 happy path** with text-only messages, env or `/pair` chat config, Vitest transformers, and emulator-depth `A1`. Mini App and Flow B follow once relocate is trustworthy.
+**M2 relocate is in the tree** (emulator `A1`–`A3`). The remaining M2 gate is a manual Test DC `A1`. Flow B (M3) is next.

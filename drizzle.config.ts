@@ -1,8 +1,26 @@
 import { defineConfig } from "drizzle-kit";
 
-/** Single PostgreSQL dialect (PGlite locally, Postgres in Helm). */
-export default defineConfig({
-  schema: "./src/db/schema.ts",
-  out: "./drizzle",
-  dialect: "postgresql",
-});
+import {
+  drizzleKitDatabaseUrl,
+  isPostgresUrl,
+} from "./src/db/databaseUrl.js";
+
+const url = drizzleKitDatabaseUrl();
+
+/** Same engine choice as `createDb`: PGlite file by default, Postgres when `DATABASE_URL` is a postgres URL. */
+export default defineConfig(
+  isPostgresUrl(url)
+    ? {
+        schema: "./src/db/schema.ts",
+        out: "./drizzle",
+        dialect: "postgresql",
+        dbCredentials: { url },
+      }
+    : {
+        schema: "./src/db/schema.ts",
+        out: "./drizzle",
+        dialect: "postgresql",
+        driver: "pglite",
+        dbCredentials: { url },
+      },
+);

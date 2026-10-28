@@ -1,4 +1,4 @@
-import { sql } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 
 import type { AppDb } from "./client.js";
 import { messages } from "./schema.js";
@@ -15,6 +15,21 @@ export type StoredMessage = {
   forwardOrigin: string | null;
   raw: unknown;
 };
+
+function mapMessage(row: typeof messages.$inferSelect): StoredMessage {
+  return {
+    chatId: row.chatId,
+    messageId: row.messageId,
+    fromUserId: row.fromUserId,
+    date: row.date,
+    text: row.text,
+    caption: row.caption,
+    contentFingerprint: row.contentFingerprint,
+    replyToMessageId: row.replyToMessageId,
+    forwardOrigin: row.forwardOrigin,
+    raw: row.raw,
+  };
+}
 
 export async function upsertMessage(
   db: AppDb,
@@ -47,6 +62,39 @@ export async function upsertMessage(
         raw: message.raw,
       },
     });
+}
+
+export async function findMessage(
+  db: AppDb,
+  chatId: number,
+  messageId: number,
+): Promise<StoredMessage | undefined> {
+  const rows = await db
+    .select()
+    .from(messages)
+    .where(and(eq(messages.chatId, chatId), eq(messages.messageId, messageId)))
+    .limit(1);
+  return rows[0] ? mapMessage(rows[0]) : undefined;
+}
+
+/** Candidates for a non-channel forward: same chat, original date, and fingerprint. */
+export async function findMessagesByContent(
+  db: AppDb,
+  chatId: number,
+  date: number,
+  contentFingerprint: string,
+): Promise<StoredMessage[]> {
+  const rows = await db
+    .select()
+    .from(messages)
+    .where(
+      and(
+        eq(messages.chatId, chatId),
+        eq(messages.date, date),
+        eq(messages.contentFingerprint, contentFingerprint),
+      ),
+    );
+  return rows.map(mapMessage);
 }
 
 export async function countMessages(db: AppDb): Promise<number> {

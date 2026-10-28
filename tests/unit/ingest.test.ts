@@ -5,7 +5,7 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { createBot } from "../../src/bot.js";
 import { upsertChatPair } from "../../src/db/chatPairs.js";
 import type { DbHandle } from "../../src/db/client.js";
-import { countMessages } from "../../src/db/messages.js";
+import { countMessages, findMessage } from "../../src/db/messages.js";
 import { createLogger } from "../../src/logger.js";
 import { createTestDb } from "../helpers/db.js";
 
@@ -77,5 +77,34 @@ describe("ingest middleware", () => {
     });
 
     expect(await countMessages(handle.db)).toBe(0);
+  });
+
+  it("updates a stored message when Telegram sends an edit", async () => {
+    await bot.handleUpdate({
+      update_id: 3,
+      message: {
+        message_id: 55,
+        date: 1_700_000_100,
+        chat: { id: -1001, type: "supergroup", title: "Main" },
+        from: { id: 9, is_bot: false, first_name: "User" },
+        text: "offtopic hello",
+      },
+    });
+    await bot.handleUpdate({
+      update_id: 4,
+      edited_message: {
+        message_id: 55,
+        date: 1_700_000_100,
+        edit_date: 1_700_000_150,
+        chat: { id: -1001, type: "supergroup", title: "Main" },
+        from: { id: 9, is_bot: false, first_name: "User" },
+        text: "offtopic edited",
+      },
+    });
+
+    expect(await countMessages(handle.db)).toBe(1);
+    expect((await findMessage(handle.db, -1001, 55))?.text).toBe(
+      "offtopic edited",
+    );
   });
 });

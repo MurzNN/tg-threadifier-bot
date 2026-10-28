@@ -6,6 +6,7 @@
 |------------|-------------|
 | Bot API cannot fetch arbitrary past chat history | Persist messages as updates arrive; matching forwards requires a local store |
 | Privacy mode / group settings | Bot must receive the messages it needs to store and act on (disable privacy or grant admin as needed) |
+| Group → supergroup upgrade changes the chat id | On `migrate_to_chat_id` / `migrate_from_chat_id`, rewrite the old id to the new one in `chat_pairs`, `messages`, `threads`, open `relocation_jobs` payloads, and in-memory `/pair` drafts |
 | Deletes and forwards need rights | Bot must be admin (or equivalently privileged) in source and target |
 | Thread deep links | Use `https://t.me/{chatPath}/{messageId}?thread={messageId}` after creating the header message ([docs](https://core.telegram.org/api/links)) |
 | HTML in messages | Use Telegram HTML subset for user/chat links in templates |
@@ -67,7 +68,7 @@ Drizzle schema properties use camelCase in TypeScript and map to snake_case colu
 
 One TypeScript `pg-core` schema and one Drizzle Kit migration tree. Engine selected at boot from `DATABASE_URL`:
 
-- **Local / Test DC default:** [PGlite](https://pglite.dev/) data dir (`file:./data/threadifier-pg` or omit URL)
+- **Local / Test DC default:** [PGlite](https://pglite.dev/) data dir (`file:./data/threadifier-pg` or omit URL). `nub run db:studio` opens that same database (a `postgres://` URL when `DATABASE_URL` is one).
 - **Helm / staging / prod:** real Postgres (`postgres://` / `postgresql://`)
 - Same SQL semantics everywhere — no dual SQLite/Postgres schemas. Do **not** run multiple app replicas against a shared PGlite directory (single-writer file).
 
@@ -140,7 +141,8 @@ One process / one container runs both the Telegram bot backend and the Mini App 
 
 ### Bot app (GrammY)
 
-- **Ingest middleware:** normalize and upsert every relevant message into the store (source + target).
+- **Ingest middleware:** normalize and upsert every relevant message into the store (source + target). At `debug`, each update and each ingest decision (stored, no message, chat outside an enabled pair) is logged. Startup logs `canReadAllGroupMessages`, the watched chat ids, and the database target, and warns when privacy mode hides ordinary group messages.
+- **Chat migration middleware:** when Telegram upgrades a basic group to a supergroup, remaps the old chat id to the new one across persisted pair/message/thread/job state (and `/pair` drafts) so ingest and relocate keep working.
 - **Forward detector:** when messages appear in `targetChat`, decide if they are a moderator-triggered forward batch from the linked `sourceChat`.
 - **Relocate workflow:** implement Flow A (header → thread link → re-forward → deletes → source notice) in clear phases.
 - **Loose-message workflow:** implement Flow B (prompt + callbacks).
@@ -194,15 +196,17 @@ Indexes: `(chat_id, message_id)` unique; `(target_chat_id, created_at desc)` on 
 
 ### Matching forwarded batches
 
-Because the moderator’s forwards land as **new** messages in `targetChat`, the bot should:
+Because the moderator’s forwards land as **new** messages in `targetChat`, the bot:
 
-1. Detect that an update is a forward (Telegram forward origin / `forward_from` / `forward_from_chat` style fields as available on Bot API for that message type).
-2. Restrict candidates to the linked `sourceChat`.
-3. Resolve each forwarded item to a stored source message via **origin metadata when present**, else fallback: same author + close timestamp + content fingerprint.
-4. Treat simultaneous or near-simultaneous forwards from the same moderator as one **batch** (grouping window TBD, e.g. same media group / short time delta).
-5. Designate the earliest (or explicitly first) message as the **initial** root for the header quote.
+1. Detects `forward_origin` on a non-bot message in the linked `targetChat` (`user`, `hidden_user`, `chat`, or `channel`).
+2. Groups forwards from the same user in that chat into one batch. The quiet period is **2 seconds** (`BATCH_WINDOW_MS`); each new forward resets it, so a media group that arrives together stays one batch.
+3. Restricts candidates to the linked `sourceChat`.
+4. Resolves each item:
+   - **Channel origin** whose chat is the source: exact `message_id`. A channel origin from any other chat is a failure (not a fuzzy match).
+   - **Otherwise:** one stored row with the same content fingerprint, the same `forward_origin.date`, and (when the sender is a known user) the same author.
+5. Sorts matches by stored `date`, then message id. The earliest is the header root.
 
-If confidence is low, **do not delete**; notify the moderator.
+Zero matches or more than one candidate is a match failure: persist `relocation_jobs.phase = aborted`, tell the moderator in the target chat, and **do not delete**.
 
 ### Relocate phases (safety)
 
@@ -210,12 +214,14 @@ Suggested commit points so failures don’t destroy unrecovered content:
 
 1. **Plan** — resolve batch; persist a `relocation_job` row (`pending`).
 2. **Create header** — post header; save `root_message_id`; mark `header_created`.
-3. **Populate thread** — forward remaining messages into thread; mark `populated`.
+3. **Populate thread** — copy remaining messages into the reply thread; mark `populated`.
 4. **Cleanup target temps** — delete moderator’s trigger forwards; mark `target_cleaned`.
 5. **Cleanup source** — delete originals; mark `source_cleaned`.
 6. **Announce** — post source notice; mark `completed`.
 
-Jobs stuck mid-state should be inspectable (admin command or logs). Prefer retriable non-destructive phases; never retry blind deletes without idempotency keys.
+The header is sent and then edited once its id is known, so `{threadLink}` is `https://t.me/{chatPath}/{messageId}?thread={messageId}`. Other messages are placed in that reply thread with `copyMessage` and `reply_parameters` pointing at the header. `forwardMessage` cannot set a reply, and `message_thread_id` applies to forum topics only — Flow A does not create forum topics. A copy is sent by the bot, so text and captions are then edited to append `— {authorName}` (`text_mention` when the sender id is known). Original formatting entities that still fit are kept. Stickers and other non-caption messages stay as the plain copy.
+
+If a Bot API call fails after the plan, the job is marked `aborted` and `payload.stoppedAt` keeps the last committed phase. Deletes that have not run are skipped. The moderator gets a short notice in the target chat. Jobs are rows in `relocation_jobs` (an inspection command is M5). `aiTitlesEnabled` is stored but ignored until M6; titles always use truncation, or the Lingui “Media message” label when the root has no text or caption. A media-only root is not copied into the thread.
 
 ### Optional AI thread titles
 
@@ -281,10 +287,10 @@ Full detail: [testing.md](testing.md). Summary:
 Record decisions here when closed:
 
 1. ~~SQLite vs Postgres for v1~~ → **Postgres dialect only** (PGlite local; Postgres Helm)
-2. Exact forward-origin fields available for channel/group forwards in Bot API version in use
-3. Batching window for multi-forward detection
+2. ~~Exact forward-origin fields~~ → Bot API `forward_origin` (`user`, `hidden_user`, `chat`, `channel`). Group forwards are usually `user` or `hidden_user` and have no original message id. `channel` carries `chat` + `message_id` and matches exactly when that chat is the linked source. Otherwise: fingerprint + exact origin date + author when the sender is known. Zero or several candidates → no deletes.
+3. ~~Batching window~~ → **2 seconds** after the latest forward from the same user in the target chat (`BATCH_WINDOW_MS`).
 4. Retention / pruning policy for `messages` table
 5. ~~Helm chart layout~~ → single chart under `charts/tg-threadifier-bot` depending on [bjw-s common](https://bjw-s-labs.github.io/helm-charts/docs/app-template/) (app-template library); optional in-chart Postgres StatefulSet; ingress host left to the target cluster
-6. Which local Bot API emulator to standardize on after evaluating method coverage (`forwardMessage`, `deleteMessage`, callbacks, …)
+6. ~~Which local Bot API emulator~~ → in-repo HTTP stub (`tests/helpers/botApiStub.ts`) that speaks the Bot API JSON envelope. `telegram-test-api` targets polling clients and does not cover `editMessageText`, `copyMessage` with `reply_parameters`, or `deleteMessages`. Test DC remains the acceptance gate.
 7. LLM provider / model for optional AI titles (and max token / latency budgets)
-8. Header max length and `{topicLabel}` truncation length beyond the Flow B 12-char button rule
+8. ~~Header max length~~ → `{threadTitle}` and `{topicLabel}` share `THREAD_TITLE_MAX` (120). Flow B buttons still shorten `{topicLabel}` to 12 (`TOPIC_LABEL_BUTTON_MAX`).

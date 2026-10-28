@@ -4,38 +4,13 @@ import { listEnabledPairs } from "../db/chatPairs.js";
 import type { AppDb } from "../db/client.js";
 import { upsertMessage } from "../db/messages.js";
 import { contentFingerprint } from "../lib/fingerprint.js";
+import {
+  mediaUniqueIds,
+  messageCaption,
+  messageText,
+  serializeForwardOrigin,
+} from "../lib/telegramMessage.js";
 import type { Logger } from "../logger.js";
-
-type IngestMessage = NonNullable<Context["message"] | Context["channelPost"]>;
-
-function mediaUniqueIds(msg: IngestMessage): string[] {
-  const ids: string[] = [];
-  const push = (id?: string) => {
-    if (id) ids.push(id);
-  };
-  push(msg.photo?.at(-1)?.file_unique_id);
-  push(msg.animation?.file_unique_id);
-  push(msg.audio?.file_unique_id);
-  push(msg.document?.file_unique_id);
-  push(msg.sticker?.file_unique_id);
-  push(msg.video?.file_unique_id);
-  push(msg.video_note?.file_unique_id);
-  push(msg.voice?.file_unique_id);
-  return ids;
-}
-
-function forwardOriginJson(msg: IngestMessage): string | null {
-  const origin =
-    "forward_origin" in msg
-      ? (msg as { forward_origin?: unknown }).forward_origin
-      : undefined;
-  if (!origin) return null;
-  try {
-    return JSON.stringify(origin);
-  } catch {
-    return null;
-  }
-}
 
 /** Persist inbound messages for chats that belong to an enabled pair. */
 export function createIngestMiddleware(
@@ -43,19 +18,33 @@ export function createIngestMiddleware(
   logger: Logger,
 ): MiddlewareFn<Context> {
   return async (ctx, next) => {
-    const msg = ctx.message ?? ctx.channelPost;
+    const msg =
+      ctx.message ??
+      ctx.editedMessage ??
+      ctx.channelPost ??
+      ctx.editedChannelPost;
     if (!msg || !ctx.chat) {
+      logger.debug(
+        { updateId: ctx.update.update_id },
+        "ingest skipped: update has no message",
+      );
       await next();
       return;
     }
 
     const pairs = await listEnabledPairs(db);
-    const watched = new Set<number>();
-    for (const pair of pairs) {
-      watched.add(pair.sourceChatId);
-      watched.add(pair.targetChatId);
-    }
-    if (!watched.has(ctx.chat.id)) {
+    const watchedChatIds = [
+      ...new Set(pairs.flatMap((pair) => [pair.sourceChatId, pair.targetChatId])),
+    ];
+    if (!watchedChatIds.includes(ctx.chat.id)) {
+      logger.debug(
+        {
+          chatId: ctx.chat.id,
+          messageId: msg.message_id,
+          watchedChatIds,
+        },
+        "ingest skipped: chat is not in an enabled pair",
+      );
       await next();
       return;
     }
@@ -66,15 +55,15 @@ export function createIngestMiddleware(
         messageId: msg.message_id,
         fromUserId: msg.from?.id ?? null,
         date: msg.date,
-        text: "text" in msg ? (msg.text ?? null) : null,
-        caption: "caption" in msg ? (msg.caption ?? null) : null,
+        text: messageText(msg),
+        caption: messageCaption(msg),
         contentFingerprint: contentFingerprint({
-          text: "text" in msg ? msg.text : null,
-          caption: "caption" in msg ? msg.caption : null,
+          text: messageText(msg),
+          caption: messageCaption(msg),
           mediaUniqueIds: mediaUniqueIds(msg),
         }),
         replyToMessageId: msg.reply_to_message?.message_id ?? null,
-        forwardOrigin: forwardOriginJson(msg),
+        forwardOrigin: serializeForwardOrigin(msg),
         raw: msg,
       });
     } catch (err) {
@@ -82,8 +71,14 @@ export function createIngestMiddleware(
         { err, chatId: ctx.chat.id, messageId: msg.message_id },
         "ingest upsert failed",
       );
+      await next();
+      return;
     }
 
+    logger.debug(
+      { chatId: ctx.chat.id, messageId: msg.message_id },
+      "ingest stored message",
+    );
     await next();
   };
 }

@@ -9,8 +9,8 @@ import { createLogger } from "../../src/logger.js";
 import { createTestDb } from "../helpers/db.js";
 
 /**
- * M1 integration smoke: PGlite persistence without a live Bot API emulator.
- * Emulator HTTP wiring lands with Flow A scenarios; this proves DB + seed path.
+ * M1 persistence smoke, plus the env-seed path.
+ * Flow A HTTP scenarios live in `flow-a.test.ts`.
  */
 describe("PGlite persistence smoke", () => {
   let handle: DbHandle;

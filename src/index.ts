@@ -1,7 +1,9 @@
 import { serve } from "@hono/node-server";
 
-import { createBot } from "./bot.js";
+import { createBot, flushRelocate } from "./bot.js";
+import { logPollingReady } from "./bot/diagnostics.js";
 import { createDb } from "./db/client.js";
+import { listEnabledPairs } from "./db/chatPairs.js";
 import { seedChatPairFromEnv } from "./db/seed.js";
 import { loadEnv } from "./env.js";
 import { createHttpApp } from "./http.js";
@@ -29,13 +31,18 @@ async function main() {
   });
 
   bot.start({
-    onStart: (me) => {
-      logger.info({ username: me.username, id: me.id }, "bot started (long polling)");
+    onStart: async (me) => {
+      logPollingReady(logger, me, await listEnabledPairs(db), env.DATABASE_URL);
     },
   });
 
   const shutdown = async (signal: string) => {
     logger.info({ signal }, "shutting down");
+    try {
+      await flushRelocate(bot);
+    } catch (err) {
+      logger.error({ err }, "relocate flush on shutdown failed");
+    }
     bot.stop();
     await close();
     process.exit(0);

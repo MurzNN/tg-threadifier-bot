@@ -93,6 +93,23 @@ export async function listEnabledPairs(db: AppDb): Promise<ChatPair[]> {
   return rows.map(mapRow);
 }
 
+export async function findEnabledPairByTarget(
+  db: AppDb,
+  targetChatId: number,
+): Promise<ChatPair | undefined> {
+  const rows = await db
+    .select()
+    .from(chatPairs)
+    .where(
+      and(
+        eq(chatPairs.enabled, true),
+        eq(chatPairs.targetChatId, targetChatId),
+      ),
+    )
+    .limit(1);
+  return rows[0] ? mapRow(rows[0]) : undefined;
+}
+
 export async function findEnabledPairForChat(
   db: AppDb,
   chatId: number,
@@ -152,5 +169,27 @@ export class PairDraftStore {
 
   clear(operatorId: number): void {
     this.#byOperator.delete(operatorId);
+  }
+
+  /** Rewrite in-flight `/pair` drafts when a group upgrades to a supergroup. */
+  remapChatId(oldChatId: number, newChatId: number): number {
+    let updated = 0;
+    for (const [operatorId, draft] of this.#byOperator) {
+      let changed = false;
+      const next = { ...draft };
+      if (next.sourceChatId === oldChatId) {
+        next.sourceChatId = newChatId;
+        changed = true;
+      }
+      if (next.targetChatId === oldChatId) {
+        next.targetChatId = newChatId;
+        changed = true;
+      }
+      if (changed) {
+        this.#byOperator.set(operatorId, next);
+        updated += 1;
+      }
+    }
+    return updated;
   }
 }

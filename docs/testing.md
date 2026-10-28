@@ -56,11 +56,10 @@ M0 sample: `tests/unit/start.test.ts` records `sendMessage` for `/start` against
 
 **Conventions:**
 
-- Point grammY at the emulator (`apiRoot` / custom fetch) — same idea as Test DC, different URL.
-- Start with [telegram-test-api](https://github.com/jehy/telegram-test-api) (or a maintained equivalent). Switch if method coverage is insufficient for `forwardMessage`, `deleteMessage`, `sendMessage` (HTML), callback queries.
-- Emulator “client” injects updates (or posts to a local webhook) to simulate moderator forwards and loose messages.
+- Point grammY at the emulator (`apiRoot`) — same idea as Test DC, different URL.
+- Flow A uses an in-repo HTTP stub (`tests/helpers/botApiStub.ts`). [telegram-test-api](https://github.com/jehy/telegram-test-api) is a polling-client emulator and does not cover `editMessageText`, `copyMessage` with `reply_parameters`, or `deleteMessages`. Updates are injected with `bot.handleUpdate` (the stub records the Bot API calls the real grammY client makes).
 - Use PGlite for the app DB in these tests (same Postgres dialect as prod).
-- Scenario-shaped tests welcome (`A1` slim): assert DB job state + recorded/emulator-visible messages — not real `t.me/...?thread=` fidelity.
+- Scenario-shaped tests (`A1` / `A2` / `A3`): assert the call sequence, HTML/Lingui text, `?thread=` link shape, and DB job phase. They do not prove real Telegram delivery.
 
 **Limitations (do not treat as acceptance):**
 
@@ -111,6 +110,18 @@ Reserved phones `99966XYYYY` (login code = DC id repeated) exist for disposable 
 **Fixtures:** unique group titles; store chat ids in scenario context; tear down or abandon (Test DC wipe is eventual). **Never** hard-code production chat ids.
 
 **Assertions:** poll with timeout; helpers such as `expectMessageMatching`, `expectDeleted`, `expectThreadLink`. Prefer stable `en` substrings + link patterns over brittle full HTML dumps.
+
+### Manual A1 (until M5 automation)
+
+Not run in CI. Use a Test DC bot that is an admin in two supergroups (read, post, and delete):
+
+1. `/pair source` in the main chat and `/pair target` in the helper chat.
+2. Post a short root and one reply in the source, and give the bot a moment to store them.
+3. Forward both into the target as the same user, within a couple of seconds.
+4. Expect a header that starts with `Thread:` and contains `?thread=`, the reply copied under that header, the temporary forwards gone, the source messages gone, and a source notice with the same link.
+5. Forward a message the bot never stored. It should stay, with a note that nothing was deleted.
+
+Keep the target chat limited to moderators: any forward into it from the linked source starts a relocate.
 
 ### Scenario catalog
 

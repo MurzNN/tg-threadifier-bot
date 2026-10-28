@@ -29,7 +29,7 @@ Before posting the thread header and source notice, the bot resolves `threadTitl
 
 | Mode | `{threadTitle}` (header) | `{topicLabel}` (source notice + stored label) |
 |------|--------------------------|-----------------------------------------------|
-| **No AI** (default) | Root message text (truncate if over header max length) | Truncated root message text |
+| **No AI** (default) | Root message text, truncated to 120 characters | Same truncated text |
 | **AI enabled** (optional) | Short AI-generated thread title | Same AI topic (or a slightly longer AI summary if configured); on AI failure → fall back to no-AI row |
 
 - AI is **opt-in** per deployment or per chat pair (config TBD). Core relocate must work with AI off.
@@ -81,7 +81,7 @@ Before posting the thread header and source notice, the bot resolves `threadTitl
 
    Reference: [Telegram links](https://core.telegram.org/api/links).
 
-6. **Bot forwards** all other messages in the moderated set (excluding the root already represented in the header) **into that thread** in `targetChat`.
+6. **Bot forwards** all other messages in the moderated set (excluding the root already represented in the header) **into that thread** in `targetChat`. The header message is the reply-thread root (`?thread=` is that message id). This is not a forum topic. Each copied message keeps its original author as a suffix on the text or caption: `— {authorName}`, linked to that user when the id is known.
 7. **Bot deletes** in `targetChat` the temporary forwarded copies that the moderator used as the trigger (they have been re-emitted by the bot).
 8. **Bot deletes** in `sourceChat` all messages that were part of the forwarded set.
 9. **Bot posts** in `sourceChat` a redirect notice:
@@ -104,11 +104,12 @@ Before posting the thread header and source notice, the bot resolves `threadTitl
 |------|--------------------|
 | Only one message forwarded | Header uses resolved title; no extra forwards into the thread; still delete source + temps; post notice |
 | Bundle order ambiguous | Prefer chronological order from stored `date` / message ids |
-| Match failure (forward not found in DB) | Do not delete anything; optionally notify moderator that history was missing |
-| Partial permissions (can’t delete) | Abort destructive steps; surface error to moderator |
-| Media / stickers / albums | Preserve as Telegram allows when forwarding into the thread |
+| Several forwards in a short burst | Forwards from the same user in `targetChat` are one batch after **2 seconds** of quiet. The earliest stored source message is the root |
+| Match failure (forward not found in DB, or more than one candidate) | Do not delete anything; tell the moderator in the target chat that history was missing |
+| Partial permissions (can’t delete) | Abort destructive steps that have not run; surface an error to the moderator. The job row keeps the last committed phase |
+| Media / stickers / albums | Non-root messages are copied into the reply thread, including stickers and files. Photos and other captionable media get the same `— {authorName}` suffix as text. Stickers and other types with nowhere to put text are copied without that line. A media-only root is represented only by the “Media message” label and is not copied again. Album grouping may split into separate replies |
 | AI timeout / error | Fall back to no-AI title resolution; do not block relocate |
-| AI disabled | Truncate / use message text only |
+| AI disabled | Truncate / use message text only (120 characters for `{threadTitle}` and `{topicLabel}`) |
 
 ---
 
@@ -180,6 +181,8 @@ Until the Mini App lands, operators configure a pair with:
 | `/unpair` | Soft-disable (`enabled=false`) the pair that includes this chat. |
 
 Admin check uses Telegram chat member status (`creator` / `administrator`). Bot must already be a member of both chats. Message ingest starts for chats that appear in an enabled pair.
+
+When Telegram upgrades a basic group to a supergroup, the chat id changes. The bot listens for `migrate_to_chat_id` (in the old group) and `migrate_from_chat_id` (in the new supergroup) and rewrites that id in `chat_pairs`, stored `messages`, `threads`, unfinished `relocation_jobs` payloads, and any in-memory `/pair` draft so the pair stays linked without re-running `/pair`.
 
 ### Steps (logical — full product)
 

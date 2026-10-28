@@ -10,6 +10,7 @@ import { mkdirSync } from "node:fs";
 import { dirname } from "node:path";
 
 import type { Env } from "../env.js";
+import { DEFAULT_DATABASE_URL, isPostgresUrl } from "./databaseUrl.js";
 import { schema } from "./schema.js";
 
 const MIGRATIONS_FOLDER = "drizzle";
@@ -25,10 +26,7 @@ export type DbHandle = {
   close: () => Promise<void>;
 };
 
-export function isPostgresUrl(url: string | undefined): boolean {
-  if (!url) return false;
-  return url.startsWith("postgres://") || url.startsWith("postgresql://");
-}
+export { isPostgresUrl } from "./databaseUrl.js";
 
 /** Local default: file-backed PGlite. Prod/Helm: postgres:// URL. */
 export async function createDb(env: Env): Promise<DbHandle> {
@@ -44,7 +42,7 @@ export async function createDb(env: Env): Promise<DbHandle> {
     };
   }
 
-  const url = env.DATABASE_URL ?? "file:./data/threadifier-pg";
+  const url = env.DATABASE_URL ?? DEFAULT_DATABASE_URL;
   const client =
     url === "memory://" || url === ":memory:"
       ? new PGlite()

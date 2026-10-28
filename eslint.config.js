@@ -7,6 +7,7 @@ export default tseslint.config(
     ignores: [
       "dist/**",
       "coverage/**",
+      ".cache/**",
       "src/locales/**/messages.js",
       "src/locales/**/messages.ts",
       "src/locales/**/messages.d.ts",
