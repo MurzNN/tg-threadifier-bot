@@ -1,6 +1,8 @@
 import { serve } from "@hono/node-server";
 
 import { createBot } from "./bot.js";
+import { createDb } from "./db/client.js";
+import { seedChatPairFromEnv } from "./db/seed.js";
 import { loadEnv } from "./env.js";
 import { createHttpApp } from "./http.js";
 import { setupI18n } from "./i18n.js";
@@ -11,8 +13,11 @@ async function main() {
   const logger = createLogger(env);
   setupI18n();
 
+  const { db, close } = await createDb(env);
+  await seedChatPairFromEnv(db, env, logger);
+
   const app = createHttpApp();
-  const bot = createBot({ token: env.BOT_TOKEN, logger });
+  const bot = createBot({ token: env.BOT_TOKEN, logger, db });
 
   serve({ fetch: app.fetch, port: env.PORT }, (info) => {
     logger.info({ port: info.port }, "http listening");
@@ -27,6 +32,7 @@ async function main() {
   const shutdown = async (signal: string) => {
     logger.info({ signal }, "shutting down");
     bot.stop();
+    await close();
     process.exit(0);
   };
 

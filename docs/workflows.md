@@ -165,22 +165,36 @@ Target chat stays thread-oriented; accidental top-level posts are recoverable wi
 ## Flow C — Operator configures chat pair
 
 **Actor:** Operator / admin  
-**Trigger:** Opens bot configuration (Mini App or bot commands — exact UX in roadmap).
+**Trigger:** Mini App (M4) or **slash commands** (M1 interim). Env vars can seed a pair for local/Test DC.
 
-### Steps (logical)
+### M1 interim — slash commands + env seed
 
-1. Authenticate as chat admin (Telegram WebApp / deep-link proof as designed).
+Until the Mini App lands, operators configure a pair with:
+
+| Mechanism | Behavior |
+|-----------|----------|
+| Env seed | On boot, if `SOURCE_CHAT_ID` and `TARGET_CHAT_ID` are set, upsert an enabled `chat_pairs` row (idempotent). |
+| `/pair source` | In a group where the caller is admin: set this chat as `sourceChat` (completes or updates the active pair). |
+| `/pair target` | Same for `targetChat`. |
+| `/status` | Show the enabled pair (ids, titles) and whether this chat is source, target, or neither. |
+| `/unpair` | Soft-disable (`enabled=false`) the pair that includes this chat. |
+
+Admin check uses Telegram chat member status (`creator` / `administrator`). Bot must already be a member of both chats. Message ingest starts for chats that appear in an enabled pair.
+
+### Steps (logical — full product)
+
+1. Authenticate as chat admin (slash-command admin check now; WebApp `initData` in M4).
 2. Select or confirm `sourceChat`.
 3. Select or confirm `targetChat`.
 4. Optionally set locale for the pair / community.
-5. Optionally **override message templates** (thread header, source notice, Flow B prompt, etc.) — edit text while keeping required `{placeholders}`; reset restores Lingui defaults for the active locale.
+5. Optionally **override message templates** (thread header, source notice, Flow B prompt, etc.) — edit text while keeping required `{placeholders}`; reset restores Lingui defaults for the active locale (Mini App).
 6. Optionally enable AI thread titles for this pair (if the deployment supports AI).
 7. Bot stores the link and overrides; optionally posts a confirmation in both chats.
 8. Bot begins (or continues) persisting messages for those chats.
 
 ### Outcome
 
-No code/env edit required to point the bot at the community’s chats or to customize bot wording.
+No code edit required to point the bot at the community’s chats. Env remains available for automation; slash commands (then Mini App) are the operator path.
 
 ---
 

@@ -1,9 +1,11 @@
 import type { ApiCallFn, Bot } from "grammy";
 import type { UserFromGetMe } from "grammy/types";
-import { beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { createBot } from "../../src/bot.js";
+import type { DbHandle } from "../../src/db/client.js";
 import { createLogger } from "../../src/logger.js";
+import { createTestDb } from "../helpers/db.js";
 
 type OutgoingCall = {
   method: string;
@@ -38,13 +40,19 @@ function installApiRecorder(bot: Bot): OutgoingCall[] {
 describe("/start (GrammY API transformer)", () => {
   let bot: Bot;
   let calls: OutgoingCall[];
+  let handle: DbHandle;
 
   beforeEach(async () => {
+    handle = await createTestDb();
     const logger = createLogger({ LOG_LEVEL: "silent", NODE_ENV: "test" });
-    bot = createBot({ token: "test:token", logger });
+    bot = createBot({ token: "test:token", logger, db: handle.db });
     bot.botInfo = botInfo;
     calls = installApiRecorder(bot);
     await bot.init();
+  });
+
+  afterEach(async () => {
+    await handle.close();
   });
 
   it("replies with the English Lingui default", async () => {
@@ -64,7 +72,7 @@ describe("/start (GrammY API transformer)", () => {
     expect(calls[0]?.method).toBe("sendMessage");
     expect(calls[0]?.payload).toMatchObject({
       chat_id: 100,
-      text: "Threadifier is online. Operators will link source and target chats in the Mini App.",
+      text: "Threadifier is online. Admins: /pair source and /pair target in the groups, or set SOURCE_CHAT_ID and TARGET_CHAT_ID. Check /status.",
     });
   });
 });

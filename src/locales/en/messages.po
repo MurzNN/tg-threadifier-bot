@@ -7,6 +7,74 @@ msgstr ""
 "X-Generator: @lingui/cli\n"
 "Language: en\n"
 
-#: src/bot.ts:17
-msgid "Threadifier is online. Operators will link source and target chats in the Mini App."
-msgstr "Threadifier is online. Operators will link source and target chats in the Mini App."
+#: src/bot/commands/pair.ts:119
+msgid "Disabled {n} chat pair(s) involving this chat."
+msgstr "Disabled {n} chat pair(s) involving this chat."
+
+#. placeholder {0}: lines.join("\n")
+#: src/bot/commands/pair.ts:154
+msgid "Enabled pairs:\n"
+"{0}"
+msgstr "Enabled pairs:\n"
+"{0}"
+
+#: src/bot/commands/pair.ts:126
+msgid "No enabled chat pairs. Use /pair source and /pair target, or set SOURCE_CHAT_ID and TARGET_CHAT_ID."
+msgstr "No enabled chat pairs. Use /pair source and /pair target, or set SOURCE_CHAT_ID and TARGET_CHAT_ID."
+
+#: src/bot/commands/pair.ts:115
+msgid "No enabled pair includes this chat."
+msgstr "No enabled pair includes this chat."
+
+#: src/bot/commands/pair.ts:59
+#: src/bot/commands/pair.ts:106
+msgid "Only chat admins can configure pairs."
+msgstr "Only chat admins can configure pairs."
+
+#. placeholder {0}: pair.sourceChatId
+#. placeholder {1}: pair.targetChatId
+#: src/bot/commands/pair.ts:47
+msgid "Pair enabled: source {0} → target {1}. Ingest is active for both chats."
+msgstr "Pair enabled: source {0} → target {1}. Ingest is active for both chats."
+
+#: src/bot/commands/pair.ts:65
+msgid "Run /pair source or /pair target inside the group chats to link."
+msgstr "Run /pair source or /pair target inside the group chats to link."
+
+#: src/bot/commands/pair.ts:110
+msgid "Run /unpair inside a linked source or target chat."
+msgstr "Run /unpair inside a linked source or target chat."
+
+#: src/bot/commands/pair.ts:31
+msgid "Source and target must be different chats. Use /pair again in each chat."
+msgstr "Source and target must be different chats. Use /pair again in each chat."
+
+#. placeholder {0}: ctx.chat.id
+#: src/bot/commands/pair.ts:90
+msgid "Source chat recorded ({0}). Now run /pair target in the helper chat."
+msgstr "Source chat recorded ({0}). Now run /pair target in the helper chat."
+
+#. placeholder {0}: ctx.chat.id
+#: src/bot/commands/pair.ts:100
+msgid "Target chat recorded ({0}). Now run /pair source in the main chat."
+msgstr "Target chat recorded ({0}). Now run /pair source in the main chat."
+
+#. placeholder {0}: pairs.length
+#: src/bot/commands/pair.ts:135
+msgid "This chat is not in an enabled pair. Enabled pairs: {0}."
+msgstr "This chat is not in an enabled pair. Enabled pairs: {0}."
+
+#. placeholder {0}: here.id
+#. placeholder {1}: here.sourceChatId
+#. placeholder {2}: here.targetChatId
+#: src/bot/commands/pair.ts:146
+msgid "This chat is the {role} in pair #{0}: {1} → {2}."
+msgstr "This chat is the {role} in pair #{0}: {1} → {2}."
+
+#: src/bot.ts:27
+msgid "Threadifier is online. Admins: /pair source and /pair target in the groups, or set SOURCE_CHAT_ID and TARGET_CHAT_ID. Check /status."
+msgstr "Threadifier is online. Admins: /pair source and /pair target in the groups, or set SOURCE_CHAT_ID and TARGET_CHAT_ID. Check /status."
+
+#: src/bot/commands/pair.ts:73
+msgid "Usage: /pair source or /pair target (run inside the group)."
+msgstr "Usage: /pair source or /pair target (run inside the group)."
