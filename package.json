@@ -1,0 +1,22 @@
+{
+  "name": "threadifier-bot",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Telegram bot that relocates offtopic discussions into helper-chat threads",
+  "license": "MIT",
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "release": "release-it",
+    "release:ci": "release-it --ci"
+  },
+  "devDependencies": {
+    "@release-it/conventional-changelog": "^10.0.0",
+    "release-it": "^19.0.0",
+    "vitest": "^3.0.0"
+  }
+}

@@ -28,7 +28,7 @@ Primary stack: **TypeScript** + **GrammY** + **Hono** + **Drizzle** + **Lingui**
 6. **All defaults translatable; templates overridable** — no hardcoded bot/Mini App copy; Lingui for defaults + UI; operators may override bot message templates in the Mini App (same `{camelCase}` placeholders). Resolution: override → locale default → `en`. Optional AI titles are opt-in with truncate fallback — never block relocate on AI failure.
 7. **Testability first:** scenario IDs in workflows Flow D; PR CI = unit + emulator; release = Test DC E2E. No hard-coded production chat IDs. See `docs/testing.md`.
 8. **Config via Mini App / bot UI**, not only env vars — operators link chats, set locale, and edit templates. Mini App is a static React+Vite SPA (no SSR unless roadmap says otherwise).
-9. **Git:** Conventional Commits and short-lived branches per `docs/contributing.md`. Commit only when the user asks; never force-push `main` or skip hooks unless explicitly requested.
+9. **Git:** Conventional Commits and short-lived branches per `docs/contributing.md`. Releases use **release-it** (changelog + GitHub Release + GHCR image) — prefer `feat`/`fix` when a version bump is intended. Commit only when the user asks; never force-push `main` or skip hooks unless explicitly requested.
 10. **No drive-by scope:** stick to the roadmap; extra features stay behind explicit milestones.
 11. When changing behavior, update the matching doc (`workflows`, `architecture`, `testing`, or `roadmap`) in the same change set.
 

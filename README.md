@@ -33,16 +33,17 @@ Details: [docs/architecture.md](docs/architecture.md).
 
 ## Quickstart
 
-> Placeholder until the first runnable milestone lands.
-
 ```bash
-# expected shape (to be confirmed in M1)
-cp .env.example .env   # BOT_TOKEN, DB URL, etc.
-npm install
-npm run dev
+npm ci
+npm test
 ```
 
-Operators will bind chats via the bot’s configuration flow (Mini App), not by editing code.
+Bot runtime scaffolding (GrammY `/start`, `.env`, etc.) is still on the roadmap. Operators will bind chats via the Mini App, not by editing code.
+
+### CI & releases
+
+- **CI:** GitHub Actions runs `npm test` on PRs and `main`.
+- **Release:** [release-it](https://github.com/release-it/release-it) on `main` updates `CHANGELOG.md`, tags, creates a GitHub Release, and publishes `ghcr.io/<owner>/threadifier-bot` when Conventional Commits warrant a bump (or via workflow_dispatch `increment`). See [docs/contributing.md](docs/contributing.md#releases--versioning).
 
 ## Docs
 

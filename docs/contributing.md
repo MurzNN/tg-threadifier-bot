@@ -122,13 +122,32 @@ chore(ci): run unit and emulator integration on PRs
 
 ---
 
-## Releases & versioning (planned)
+## Releases & versioning
 
-When versioning starts:
+Releases are automated with [release-it](https://github.com/release-it/release-it) and [@release-it/conventional-changelog](https://github.com/release-it/conventional-changelog).
 
-- Prefer [SemVer](https://semver.org/) derived from Conventional Commits (`feat` → minor, `fix` → patch, `BREAKING CHANGE` → major).
-- Optional later: `semantic-release` or similar — only if it reduces manual work (aligns with “reuse libraries”).
-- Tag releases from `main`; Helm chart / image tags should match the app version where practical.
+| Piece | Behavior |
+|-------|----------|
+| Version bump | From Conventional Commits on `main` (`feat` → minor, `fix` → patch, `BREAKING CHANGE` → major) |
+| Changelog | Updates `CHANGELOG.md` |
+| Git | Commit `chore(release): vX.Y.Z` + tag `vX.Y.Z` |
+| GitHub | Creates a GitHub Release |
+| Container | Pushes `ghcr.io/<owner>/threadifier-bot` tagged `latest`, `X.Y.Z`, and `vX.Y.Z` |
+
+**CI workflows:**
+
+- [`.github/workflows/ci.yml`](../.github/workflows/ci.yml) — `npm test` on PRs and pushes to `main`
+- [`.github/workflows/release.yml`](../.github/workflows/release.yml) — after tests on `main`, runs `release-it --ci` when there is a releasable bump, then builds/pushes the image to GHCR
+
+`docs` / `chore` / `ci` commits alone usually **do not** cut a release. To force a version (e.g. first publish), use **Actions → Release → Run workflow** and set `increment` (`patch`, `minor`, `major`, or `x.y.z`).
+
+Local dry-run:
+
+```bash
+npx release-it --dry-run
+```
+
+npm publish is disabled (`private: true`); the distributable artifact is the container image.
 
 ---
 

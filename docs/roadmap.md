@@ -8,9 +8,11 @@ Granular milestones. Order is dependency-aware; checkboxes are for tracking impl
 
 - [x] Capture problem, workflows, architecture, roadmap, testing, contributing
 - [x] Add agent entrypoint (`AGENTS.md`) and human `README.md`
-- [ ] Scaffold TypeScript + GrammY + Hono project (`package.json`, lint, tsconfig)
+- [x] Base `package.json`, Vitest smoke test, Dockerfile placeholder entrypoint
+- [x] GitHub Actions CI (`test`) + Release (`release-it` changelog/tag + GHCR image)
+- [ ] Scaffold TypeScript + GrammY + Hono project (lint, tsconfig, real bot entry)
 - [ ] Wire [Lingui](https://lingui.dev/) (extract/compile scripts, default `en` catalog); `/start` via `t` macro
-- [ ] Wire [Vitest](https://vitest.dev/); sample unit test with grammY API transformer
+- [ ] Expand Vitest beyond smoke (GrammY API transformer sample)
 - [ ] Zod env schema + [pino](https://getpino.io/) logging baseline
 - [ ] `.env.example`, empty bot entry that answers `/start`
 
