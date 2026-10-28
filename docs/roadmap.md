@@ -33,7 +33,7 @@ Granular milestones. Order is dependency-aware; checkboxes are for tracking impl
 
 ---
 
-## M1.5 — Packaging for manual testing
+## M1.5 — Packaging for manual testing ✅
 
 Moved earlier so Flow A/B work can be exercised on a real cluster / Test DC without waiting for Mini App.
 
