@@ -43,6 +43,8 @@ scripts/
 - Feed updates via `bot.handleUpdate(...)`.
 - Assert call sequences (e.g. `sendMessage` → `forwardMessage` → `deleteMessage`) and Lingui/`en` substrings.
 
+M0 sample: `tests/unit/start.test.ts` records `sendMessage` for `/start` against the English Lingui default.
+
 ---
 
 ## Integration (local Bot API emulator)

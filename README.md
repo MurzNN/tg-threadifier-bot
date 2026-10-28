@@ -16,33 +16,40 @@ See [docs/workflows.md](docs/workflows.md) for full scenarios, including “no l
 
 ## Status
 
-Documentation / design phase. Implementation has not started. See [docs/roadmap.md](docs/roadmap.md).
+**M0 scaffold complete:** TypeScript + GrammY + Hono no-op bot answers `/start` (Lingui `en`), Zod env, pino logs, Vitest transformer sample. Persistence and relocate workflows are next — [docs/roadmap.md](docs/roadmap.md).
 
-## Stack (planned)
+## Stack
 
 - **Language:** TypeScript
 - **Bot framework:** [GrammY](https://grammy.dev/)
-- **HTTP:** [Hono](https://hono.dev/) (webhook, health, Mini App, config API)
+- **HTTP:** [Hono](https://hono.dev/) (health now; webhook, Mini App, config API later)
 - **i18n:** [Lingui](https://lingui.dev/) for all default bot templates and Mini App UI; operators can override bot templates in the app
-- **DB:** [Drizzle](https://orm.drizzle.team/) — SQLite locally, Postgres in Helm
-- **Mini App:** React + Vite static SPA (same app; no SSR for v1)
+- **Validation / logs:** [Zod](https://zod.dev/) + [pino](https://getpino.io/)
+- **DB (upcoming):** [Drizzle](https://orm.drizzle.team/) — SQLite locally, Postgres in Helm
+- **Mini App (upcoming):** React + Vite static SPA (same app; no SSR for v1)
 - **Deploy:** Docker image + Helm chart
-- **Testing:** Vitest + local Bot API emulator on PRs; Telegram Test DC + mtcute scenarios for release acceptance — [docs/testing.md](docs/testing.md)
+- **Testing:** Vitest + GrammY API transformers (local Bot API emulator and Test DC + mtcute later) — [docs/testing.md](docs/testing.md)
 
 Details: [docs/architecture.md](docs/architecture.md).
 
 ## Quickstart
 
+Requires [Nub](https://nubjs.com/) (`curl -fsSL https://nubjs.com/install.sh | bash`, or `npm install -g @nubjs/nub`).
+
 ```bash
-npm ci
-npm test
+cp .env.example .env   # set BOT_TOKEN from BotFather
+nub install
+nub run test
+nub run dev            # long polling + GET /health on PORT (default 3000)
 ```
 
-Bot runtime scaffolding (GrammY `/start`, `.env`, etc.) is still on the roadmap. Operators will bind chats via the Mini App, not by editing code.
+Useful scripts: `nub run typecheck`, `nub run lint`, `nub run i18n:extract`, `nub run i18n:compile`, `nub run build` / `nub run start`. Nub loads `.env` automatically when running scripts/files.
+
+Operators will bind chats via the Mini App (roadmap M4), not by editing code. Until then the bot only answers `/start`.
 
 ### CI & releases
 
-- **CI:** GitHub Actions runs `npm test` on PRs and `main`.
+- **CI:** GitHub Actions (`nubjs/setup-nub`) runs typecheck, lint, and `nub run test` on PRs and `main`.
 - **Release:** [release-it](https://github.com/release-it/release-it) on `main` updates `CHANGELOG.md`, tags, creates a GitHub Release, and publishes `ghcr.io/<owner>/threadifier-bot` when Conventional Commits warrant a bump (or via workflow_dispatch `increment`). See [docs/contributing.md](docs/contributing.md#releases--versioning).
 
 ## Docs

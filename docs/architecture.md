@@ -31,6 +31,7 @@ Drizzle schema properties use camelCase in TypeScript and map to snake_case colu
 |-------|--------|
 | Language | TypeScript (JavaScript only if a thin glue script is unavoidable) |
 | Runtime | Node.js (LTS) |
+| Tooling | [Nub](https://nubjs.com/) — installs (`nub.lock`), script runner, TS file runner; Docker via `ghcr.io/nubjs/nub` |
 | Bot framework | [GrammY](https://grammy.dev/) (+ official plugins: auto-retry, parse-mode, hydrate, menu/keyboards as needed) |
 | HTTP | [Hono](https://hono.dev/) — webhook, health, static Mini App, config API |
 | i18n | [Lingui](https://lingui.dev/) only (no `@grammyjs/i18n` alongside it) |

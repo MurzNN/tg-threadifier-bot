@@ -18,14 +18,19 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      - name: Setup Nub
+        uses: nubjs/setup-nub@v0
         with:
           node-version: "22"
-          cache: npm
 
       - name: Install dependencies
-        run: npm ci
+        run: nub ci
+
+      - name: Typecheck
+        run: nub run typecheck
+
+      - name: Lint
+        run: nub run lint
 
       - name: Run unit tests
-        run: npm test
+        run: nub run test

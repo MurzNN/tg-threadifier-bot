@@ -136,7 +136,7 @@ Releases are automated with [release-it](https://github.com/release-it/release-i
 
 **CI workflows:**
 
-- [`.github/workflows/ci.yml`](../.github/workflows/ci.yml) — `npm test` on PRs and pushes to `main`
+- [`.github/workflows/ci.yml`](../.github/workflows/ci.yml) — typecheck, lint, and `nub run test` on PRs and pushes to `main`
 - [`.github/workflows/release.yml`](../.github/workflows/release.yml) — after tests on `main`, runs `release-it --ci` when there is a releasable bump, then builds/pushes the image to GHCR
 
 `docs` / `chore` / `ci` commits alone usually **do not** cut a release. To force a version (e.g. first publish), use **Actions → Release → Run workflow** and set `increment` (`patch`, `minor`, `major`, or `x.y.z`).
@@ -144,10 +144,10 @@ Releases are automated with [release-it](https://github.com/release-it/release-i
 Local dry-run:
 
 ```bash
-npx release-it --dry-run
+nubx release-it --dry-run
 ```
 
-npm publish is disabled (`private: true`); the distributable artifact is the container image.
+Registry publish is disabled (`private: true`); the distributable artifact is the container image. Use **[Nub](https://nubjs.com/)** (`packageManager` / `nub.lock`); do not commit `package-lock.json` or `pnpm-lock.yaml`.
 
 ---
 

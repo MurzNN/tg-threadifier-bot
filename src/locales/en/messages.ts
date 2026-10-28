@@ -1,0 +1,1 @@
+/*eslint-disable*/import type{Messages}from"@lingui/core";export const messages=JSON.parse("{\"sD1Tli\":[\"Threadifier is online. Operators will link source and target chats in the Mini App.\"]}")as Messages;
