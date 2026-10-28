@@ -24,17 +24,22 @@
     "lint": "eslint .",
     "i18n:extract": "lingui extract --clean",
     "i18n:compile": "lingui compile",
+    "db:generate": "drizzle-kit generate",
+    "db:studio": "drizzle-kit studio",
     "test": "nub run i18n:compile && vitest run",
     "test:watch": "vitest",
     "release": "release-it",
     "release:ci": "release-it --ci"
   },
   "dependencies": {
+    "@electric-sql/pglite": "^0.5.12",
     "@hono/node-server": "^2.1.5",
     "@lingui/core": "^6.10.1",
+    "drizzle-orm": "^0.45.4",
     "grammy": "^1.46.0",
     "hono": "^4.13.14",
     "pino": "^10.4.0",
+    "postgres": "^3.4.9",
     "zod": "^4.6.7"
   },
   "devDependencies": {
@@ -45,6 +50,7 @@
     "@lingui/vite-plugin": "^6.10.1",
     "@release-it/conventional-changelog": "^10.0.0",
     "@types/node": "^26.6.5",
+    "drizzle-kit": "^0.31.11",
     "eslint": "^10.13.0",
     "globals": "^17.13.0",
     "pino-pretty": "^13.2.0",

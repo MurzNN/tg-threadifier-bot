@@ -36,15 +36,15 @@ Drizzle schema properties use camelCase in TypeScript and map to snake_case colu
 | HTTP | [Hono](https://hono.dev/) — webhook, health, static Mini App, config API |
 | i18n | [Lingui](https://lingui.dev/) only (no `@grammyjs/i18n` alongside it) |
 | Persistence | [Drizzle ORM](https://orm.drizzle.team/) + Drizzle Kit |
-| DB engines | **Both from day one:** SQLite (local / single-replica) + Postgres (Helm / multi-replica) |
-| Drivers | SQLite: `better-sqlite3`; Postgres: `postgres` (via Drizzle) |
+| DB dialect | **PostgreSQL only** (one schema / one migration tree) |
+| Drivers | Local/Test DC: [PGlite](https://pglite.dev/) (in-process Postgres); Helm/prod: `postgres` (via Drizzle) |
 | Validation | [Zod](https://zod.dev/) (env, API bodies, `initData` helpers) |
 | Logging | [pino](https://getpino.io/) |
 | Mini App UI | React + Vite — **static SPA** (no SSR for v1) |
 | Packaging | Single deployable app (bot backend + Mini App assets) |
 | Deployment | Docker image + Helm chart (Postgres in cluster) |
 | Unit tests | [Vitest](https://vitest.dev/) + grammY API transformers |
-| Integration tests | Vitest + local Bot API emulator + SQLite |
+| Integration tests | Vitest + local Bot API emulator + PGlite |
 | Acceptance E2E | Telegram **Test DCs** + [@mtcute/node](https://mtcute.dev) user clients |
 | Optional AI titles | Pluggable LLM client (provider TBD) — **opt-in**; truncate fallback always |
 
@@ -63,14 +63,13 @@ Drizzle schema properties use camelCase in TypeScript and map to snake_case colu
 | Integration Bot API | Local emulator (e.g. [telegram-test-api](https://github.com/jehy/telegram-test-api) or maintained equivalent) | Hitting production Telegram from PR CI |
 | E2E user actions | mtcute (`testMode: true`) | Driving acceptance only via Bot API |
 
-## Persistence (dual dialect)
+## Persistence (PostgreSQL dialect)
 
-One TypeScript schema and Drizzle Kit migrations; dialect selected at boot:
+One TypeScript `pg-core` schema and one Drizzle Kit migration tree. Engine selected at boot from `DATABASE_URL`:
 
-- `DATABASE_DRIVER=sqlite|postgres` and/or a `DATABASE_URL` scheme
-- **Local / Test DC app DB default:** SQLite file
-- **Helm / staging / prod default:** Postgres
-- Do **not** run multiple app replicas against SQLite (single-writer)
+- **Local / Test DC default:** [PGlite](https://pglite.dev/) data dir (`file:./data/threadifier-pg` or omit URL)
+- **Helm / staging / prod:** real Postgres (`postgres://` / `postgresql://`)
+- Same SQL semantics everywhere — no dual SQLite/Postgres schemas. Do **not** run multiple app replicas against a shared PGlite directory (single-writer file).
 
 ## Internationalization & templates
 
@@ -134,7 +133,7 @@ One process / one container runs both the Telegram bot backend and the Mini App 
                                      └────────────────┬────────────────┘
                                                       │
                                      ┌────────────────▼────────────────┐
-                                     │  Drizzle → SQLite or Postgres   │
+                                     │  Drizzle → PGlite or Postgres   │
                                      │  messages / chat_pairs / threads│
                                      └─────────────────────────────────┘
 ```
@@ -248,19 +247,20 @@ Guidelines:
 - One image tag = one releasable version of bot + Mini App together (no split versioning).
 - Prefer existing community Helm patterns / chart helpers where they fit; keep values.yaml focused on Telegram token, DB, ingress host, and resource limits.
 - Local/dev may run the app without Kubernetes; Docker remains the canonical runtime shape for staging/prod.
-- Helm defaults to **Postgres**; local defaults to **SQLite**.
+- Helm defaults to **Postgres**; local defaults to **PGlite** (same dialect).
 
 ## Configuration (runtime)
 
 Environment (illustrative):
 
 - `BOT_TOKEN` — from BotFather (Test DC token for E2E)
-- `DATABASE_DRIVER` / `DATABASE_URL`
+- `DATABASE_URL` — `file:…` (or omit) for local PGlite; `postgres://` / `postgresql://` for real Postgres
+- `SOURCE_CHAT_ID` / `TARGET_CHAT_ID` — optional boot seed into `chat_pairs` for local/Test DC (slash commands or Mini App are the operator path)
 - `WEBAPP_URL` / public origin — Mini App URL registered with BotFather (same host the app serves)
 - `PORT` — HTTP listen port for Mini App + health + webhook
 - Optional: `LOG_LEVEL`, feature flags
 
-Chat IDs themselves live in DB after pairing, not only in `.env`. Helm values map these into the container env/secrets.
+Chat IDs live in `chat_pairs` after pairing. Until M4, operators can also use `/pair`, `/unpair`, `/status` (see [workflows.md](workflows.md) Flow C). Helm values map secrets into the container env.
 
 ## Testing strategy
 
@@ -269,7 +269,7 @@ Full detail: [testing.md](testing.md). Summary:
 | Layer | Role | CI |
 |-------|------|-----|
 | Unit (Vitest + grammY transformers) | Fingerprints, phases, link builders, handlers with injected updates | Every PR |
-| Integration (Vitest + local Bot API emulator + SQLite) | HTTP Bot API path, multi-step workflows, DB jobs — no Telegram secrets | Every PR |
+| Integration (Vitest + local Bot API emulator + PGlite) | HTTP Bot API path, multi-step workflows, DB jobs — no Telegram secrets | Every PR |
 | **E2E scenarios (Test DC + mtcute)** | **Main product acceptance** — Flow A/B/C as real users | Nightly / protected workflow with secrets |
 
 - **PR bar:** unit + emulator integration green.
@@ -280,7 +280,7 @@ Full detail: [testing.md](testing.md). Summary:
 
 Record decisions here when closed:
 
-1. ~~SQLite vs Postgres for v1~~ → **both** (SQLite local; Postgres Helm)
+1. ~~SQLite vs Postgres for v1~~ → **Postgres dialect only** (PGlite local; Postgres Helm)
 2. Exact forward-origin fields available for channel/group forwards in Bot API version in use
 3. Batching window for multi-forward detection
 4. Retention / pruning policy for `messages` table

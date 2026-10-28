@@ -11,7 +11,7 @@ See also: [workflows.md](workflows.md) (Flow D scenario IDs), [architecture.md](
 | Layer | Fakes | Proves | CI |
 |-------|-------|--------|-----|
 | **Unit** — Vitest + grammY **API transformers** | Outgoing Bot API in-process | Handlers, templates, phase logic with injected updates | Every PR |
-| **Integration** — Vitest + **local Bot API emulator** + SQLite | HTTP Bot API + simple client injection | Bot ↔ HTTP wiring, multi-step flows, DB jobs — **no Telegram secrets** | Every PR |
+| **Integration** — Vitest + **local Bot API emulator** + PGlite | HTTP Bot API + simple client injection | Bot ↔ HTTP wiring, multi-step flows, DB jobs — **no Telegram secrets** | Every PR |
 | **E2E** — Vitest + grammY `environment: "test"` + **mtcute** `testMode` | Nothing (real Test DC) | Forwards, threads, deep links, rights, real update shapes | Nightly / manual / protected workflow |
 
 - **Everyday PR bar:** unit + integration green.
@@ -25,7 +25,7 @@ See also: [workflows.md](workflows.md) (Flow D scenario IDs), [architecture.md](
 ```
 tests/
   unit/           # transformers
-  integration/    # local Bot API emulator + SQLite
+  integration/    # local Bot API emulator + PGlite
   e2e/
     scenarios/    # Test DC acceptance (A1, B1, …)
     harness/      # bot bootstrap, mtcute clients, chat factory, asserts
@@ -56,7 +56,7 @@ M0 sample: `tests/unit/start.test.ts` records `sendMessage` for `/start` against
 - Point grammY at the emulator (`apiRoot` / custom fetch) — same idea as Test DC, different URL.
 - Start with [telegram-test-api](https://github.com/jehy/telegram-test-api) (or a maintained equivalent). Switch if method coverage is insufficient for `forwardMessage`, `deleteMessage`, `sendMessage` (HTML), callback queries.
 - Emulator “client” injects updates (or posts to a local webhook) to simulate moderator forwards and loose messages.
-- Use SQLite for the app DB in these tests.
+- Use PGlite for the app DB in these tests (same Postgres dialect as prod).
 - Scenario-shaped tests welcome (`A1` slim): assert DB job state + recorded/emulator-visible messages — not real `t.me/...?thread=` fidelity.
 
 **Limitations (do not treat as acceptance):**
@@ -98,7 +98,7 @@ Reserved phones `99966XYYYY` (login code = DC id repeated) exist for disposable 
 
 | Role | Implementation |
 |------|----------------|
-| Bot under test | Real app, test-env token, SQLite (or ephemeral Postgres) |
+| Bot under test | Real app, test-env token, PGlite (or ephemeral Postgres) |
 | Moderator | mtcute session A — seed messages, forward source→target, admin |
 | Member (optional) | mtcute session B — loose messages + button clicks |
 | Chats | Created per run (`threadifier-e2e-${runId}`); bot promoted admin |

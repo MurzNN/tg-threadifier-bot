@@ -25,7 +25,7 @@ See [docs/workflows.md](docs/workflows.md) for full scenarios, including “no l
 - **HTTP:** [Hono](https://hono.dev/) (health now; webhook, Mini App, config API later)
 - **i18n:** [Lingui](https://lingui.dev/) for all default bot templates and Mini App UI; operators can override bot templates in the app
 - **Validation / logs:** [Zod](https://zod.dev/) + [pino](https://getpino.io/)
-- **DB (upcoming):** [Drizzle](https://orm.drizzle.team/) — SQLite locally, Postgres in Helm
+- **DB:** [Drizzle](https://orm.drizzle.team/) — PostgreSQL dialect (PGlite locally, Postgres in Helm)
 - **Mini App (upcoming):** React + Vite static SPA (same app; no SSR for v1)
 - **Deploy:** Docker image + Helm chart
 - **Testing:** Vitest + GrammY API transformers (local Bot API emulator and Test DC + mtcute later) — [docs/testing.md](docs/testing.md)

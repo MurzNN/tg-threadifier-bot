@@ -15,3 +15,4 @@ coverage/
 .vitest/
 *.session
 *.session-journal
+data/
