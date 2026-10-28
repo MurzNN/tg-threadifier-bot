@@ -100,7 +100,7 @@ Store overrides in the DB (e.g. `message_template_overrides`: `chat_pair_id`, `t
 
 ### Conventions
 
-- Prefer Lingui macros (`t`, `msg`, `Trans` in the Mini App) for defaults and UI so catalogs stay extractable.
+- Prefer Lingui macros (`t`, `msg`, `Trans` in the Mini App) for defaults and UI so catalogs stay extractable. Put each reply sentence in one `t` template, including state words such as "enabled", so translators do not receive concatenated fragments.
 - Keep Telegram HTML (`<a href="...">`, etc.) inside messages; translators and operators must preserve placeholders and tags. Escape user-derived values before interpolation.
 - Dynamic parts include `threadTitle`, `topicLabel`, `userDisplayName`, `threadLink`, chat titles.
 - Message templates in `workflows.md` are the **English meaning** reference for defaults; Lingui catalogs are the shipped defaults; DB overrides are the per-community runtime customization.
@@ -109,7 +109,8 @@ Store overrides in the DB (e.g. `message_template_overrides`: `chat_pair_id`, `t
 
 ### Tooling
 
-- Extract / compile catalogs in the normal build or a dedicated `lingui extract` / `lingui compile` script.
+- User-facing defaults use the `t` macro from `@lingui/core/macro`. After adding or changing a `t` string, run `nub run i18n:extract` (rewrites `src/locales/en/messages.po`) then `nub run i18n:compile` (rewrites `src/locales/en/messages.ts`). Leave `messages.ts` to the compiler.
+- `tests/setup.ts` calls `setupI18n()`. Unit tests assert English substrings of the rendered reply.
 - Unit-test critical messages with a fixed locale to lock placeholder wiring (links, truncation labels).
 - Unit/integration tests for override resolution (override wins; missing override falls back; invalid placeholder rejected on save).
 
@@ -146,7 +147,7 @@ One process / one container runs both the Telegram bot backend and the Mini App 
 - **Forward detector:** when messages appear in `targetChat`, decide if they are a moderator-triggered forward batch from the linked `sourceChat`.
 - **Relocate workflow:** implement Flow A (header → thread link → re-forward → deletes → source notice) in clear phases.
 - **Loose-message workflow:** implement Flow B (prompt + callbacks).
-- **Admin / config handlers:** pair chats; health; maybe dry-run flags for Test DC.
+- **Admin / config handlers:** pair chats; health; maybe dry-run flags for Test DC. See [Operator commands](#operator-commands).
 
 ### Message store
 
@@ -178,6 +179,17 @@ Minimal fields to support matching and UI:
 | `source_username_or_path` | For deep links when public |
 | `ai_titles_enabled` | Optional; default false; TS: `aiTitlesEnabled` |
 | `enabled` | Soft disable |
+
+#### Operator commands
+
+Handlers live in `src/bot/commands/pair.ts`. Persistence lives in `src/db/chatPairs.ts`. Normative behavior is [workflows.md](workflows.md) Flow C.
+
+- Replies are plain text (`ctx.reply`, no `parse_mode`). Telegram HTML and `escapeHtml` are for relocate templates (`src/bot/relocate/templates.ts`).
+- `requireChatAdmin` (`src/bot/admin.ts`) treats a private chat as allowed and, in a group, requires Telegram status `creator` or `administrator`. `/pair` with no arguments and `/status` do not call it. `/pair source`, `/pair target`, and `/unpair` do.
+- Rows are not owned by the operator who created them. The table has no configuring-user column.
+- Upsert identity is `(source_chat_id, target_chat_id)`. One chat may appear in more than one row.
+- `/unpair` sets `enabled=false` and leaves the row. A list of all pairs includes disabled rows and rows seeded from `SOURCE_CHAT_ID` / `TARGET_CHAT_ID`.
+- An in-progress `/pair source` then `/pair target` lives in the in-memory `PairDraftStore`, keyed by the operator's Telegram user id. The row is written when both chats are set.
 
 **`threads`**
 
@@ -266,7 +278,7 @@ Environment (illustrative):
 - `PORT` — HTTP listen port for Mini App + health + webhook
 - Optional: `LOG_LEVEL`, feature flags
 
-Chat IDs live in `chat_pairs` after pairing. Until M4, operators can also use `/pair`, `/unpair`, `/status` (see [workflows.md](workflows.md) Flow C). Helm values map secrets into the container env.
+Chat IDs live in `chat_pairs` after pairing. Until M4, operators can also use `/pair`, `/unpair`, `/status` (see [workflows.md](workflows.md) Flow C). `/pair` with no arguments lists every stored pair in a private chat and reports the current chat's pairing in a group. Helm values map secrets into the container env.
 
 ## Testing strategy
 

@@ -65,6 +65,26 @@ function installApiRecorder(bot: Bot): OutgoingCall[] {
   return calls;
 }
 
+function privateCommand(updateId: number, text: string) {
+  return {
+    update_id: updateId,
+    message: {
+      message_id: updateId,
+      date: 1_700_000_000,
+      chat: { id: 7, type: "private" as const, first_name: "Admin" },
+      from: { id: 7, is_bot: false, first_name: "Admin" },
+      text,
+      entities: [
+        {
+          offset: 0,
+          length: text.indexOf(" ") === -1 ? text.length : text.indexOf(" "),
+          type: "bot_command" as const,
+        },
+      ],
+    },
+  };
+}
+
 function groupCommand(
   updateId: number,
   chatId: number,
@@ -130,6 +150,83 @@ describe("pair commands", () => {
     expect(reply?.payload).toMatchObject({
       text: expect.stringContaining("source"),
     });
+  });
+
+  it("/pair with no arguments lists every configured pair in a private chat", async () => {
+    await bot.handleUpdate(privateCommand(1, "/pair"));
+    expect(calls.find((c) => c.method === "sendMessage")?.payload).toMatchObject({
+      chat_id: 7,
+      text: expect.stringContaining("No chat pairs configured"),
+    });
+
+    await bot.handleUpdate(groupCommand(2, -1001, "/pair source", "Main"));
+    await bot.handleUpdate(groupCommand(3, -1002, "/pair target", "Helper"));
+    await bot.handleUpdate(groupCommand(4, -1003, "/pair source", "Other"));
+    await bot.handleUpdate(groupCommand(5, -1004, "/pair target", "Side"));
+    calls.length = 0;
+
+    await bot.handleUpdate(privateCommand(6, "/pair"));
+    const text = String(
+      calls.find((c) => c.method === "sendMessage")?.payload.text,
+    );
+    expect(text).toContain("Configured pairs:");
+    expect(text).toContain("(enabled): Main (-1001) → Helper (-1002)");
+    expect(text).toContain("(enabled): Other (-1003) → Side (-1004)");
+  });
+
+  it("/pair with no arguments reports this chat's pairing in a group", async () => {
+    await bot.handleUpdate(groupCommand(1, -1001, "/pair", "Main"));
+    expect(calls.find((c) => c.method === "sendMessage")?.payload).toMatchObject({
+      chat_id: -1001,
+      text: expect.stringContaining("not paired"),
+    });
+
+    await bot.handleUpdate(groupCommand(2, -1001, "/pair source", "Main"));
+    await bot.handleUpdate(groupCommand(3, -1002, "/pair target", "Helper"));
+    calls.length = 0;
+
+    await bot.handleUpdate(groupCommand(4, -1002, "/pair", "Helper"));
+    const text = String(
+      calls.find((c) => c.method === "sendMessage")?.payload.text,
+    );
+    expect(text).toContain("This chat is the target in pair #");
+    expect(text).toContain("(enabled)");
+    expect(text).toContain("Source: Main (-1001)");
+    expect(text).toContain("Target: Helper (-1002)");
+    expect(calls.some((c) => c.method === "getChatMember")).toBe(false);
+  });
+
+  it("/pair in a group lists every pair that includes the chat", async () => {
+    await bot.handleUpdate(groupCommand(1, -1001, "/pair source", "Main"));
+    await bot.handleUpdate(groupCommand(2, -1002, "/pair target", "Helper"));
+    await bot.handleUpdate(groupCommand(3, -1001, "/pair source", "Main"));
+    await bot.handleUpdate(groupCommand(4, -1004, "/pair target", "Side"));
+    calls.length = 0;
+
+    await bot.handleUpdate(groupCommand(5, -1001, "/pair", "Main"));
+    const text = String(
+      calls.find((c) => c.method === "sendMessage")?.payload.text,
+    );
+    expect(text).toContain("This chat is in 2 pairs:");
+    expect(text).toContain("Helper (-1002)");
+    expect(text).toContain("Side (-1004)");
+    expect(text).not.toContain("not paired");
+  });
+
+  it("/pair in a group reports a disabled pair", async () => {
+    await bot.handleUpdate(groupCommand(1, -1001, "/pair source", "Main"));
+    await bot.handleUpdate(groupCommand(2, -1002, "/pair target", "Helper"));
+    await bot.handleUpdate(groupCommand(3, -1001, "/unpair", "Main"));
+    calls.length = 0;
+
+    await bot.handleUpdate(groupCommand(4, -1001, "/pair", "Main"));
+    const text = String(
+      calls.find((c) => c.method === "sendMessage")?.payload.text,
+    );
+    expect(text).toContain("This chat is the source in pair #");
+    expect(text).toContain("(disabled)");
+    expect(text).toContain("Source: Main (-1001)");
+    expect(text).toContain("Target: Helper (-1002)");
   });
 
   it("/unpair disables pairs for the chat", async () => {

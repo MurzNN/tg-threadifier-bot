@@ -4,9 +4,12 @@ import type { Bot, Context } from "grammy";
 import {
   disablePairsForChat,
   findEnabledPairForChat,
+  listChatPairs,
   listEnabledPairs,
+  listPairsForChat,
   PairDraftStore,
   upsertChatPair,
+  type ChatPair,
   type PairDraft,
 } from "../../db/chatPairs.js";
 import type { AppDb } from "../../db/client.js";
@@ -49,28 +52,96 @@ async function completeIfReady(
   return true;
 }
 
+function chatLabel(title: string | null, chatId: number): string {
+  const name = title?.replace(/\s+/g, " ").trim();
+  return name ? `${name} (${chatId})` : String(chatId);
+}
+
+function formatConfiguredPair(pair: ChatPair): string {
+  const source = chatLabel(pair.sourceTitle, pair.sourceChatId);
+  const target = chatLabel(pair.targetTitle, pair.targetChatId);
+  if (pair.enabled) {
+    return t`#${pair.id} (enabled): ${source} → ${target}`;
+  }
+  return t`#${pair.id} (disabled): ${source} → ${target}`;
+}
+
+function formatChatPairStatus(pair: ChatPair, chatId: number): string {
+  const source = chatLabel(pair.sourceTitle, pair.sourceChatId);
+  const target = chatLabel(pair.targetTitle, pair.targetChatId);
+  if (pair.sourceChatId === chatId) {
+    if (pair.enabled) {
+      return t`This chat is the source in pair #${pair.id} (enabled).\nSource: ${source}\nTarget: ${target}`;
+    }
+    return t`This chat is the source in pair #${pair.id} (disabled).\nSource: ${source}\nTarget: ${target}`;
+  }
+  if (pair.enabled) {
+    return t`This chat is the target in pair #${pair.id} (enabled).\nSource: ${source}\nTarget: ${target}`;
+  }
+  return t`This chat is the target in pair #${pair.id} (disabled).\nSource: ${source}\nTarget: ${target}`;
+}
+
+/** `/pair` with no arguments: every pair in private, this chat's pairing in a group. */
+async function replyPairStatus(ctx: Context, db: AppDb): Promise<void> {
+  if (!ctx.chat) return;
+
+  if (ctx.chat.type === "private") {
+    const pairs = await listChatPairs(db);
+    if (pairs.length === 0) {
+      await ctx.reply(
+        t`No chat pairs configured. Run /pair source and /pair target inside the group chats to link.`,
+      );
+      return;
+    }
+    const lines = pairs.map(formatConfiguredPair);
+    await ctx.reply(t`Configured pairs:\n${lines.join("\n")}`);
+    return;
+  }
+
+  const chatId = ctx.chat.id;
+  const pairs = await listPairsForChat(db, chatId);
+  if (pairs.length === 0) {
+    await ctx.reply(
+      t`This chat is not paired. Admins can run /pair source or /pair target here.`,
+    );
+    return;
+  }
+  if (pairs.length === 1) {
+    await ctx.reply(formatChatPairStatus(pairs[0]!, chatId));
+    return;
+  }
+  const blocks = pairs.map((pair) => formatChatPairStatus(pair, chatId));
+  await ctx.reply(
+    t`This chat is in ${pairs.length} pairs:\n${blocks.join("\n\n")}`,
+  );
+}
+
 export function registerPairCommands(
   bot: Bot,
   db: AppDb,
   drafts: PairDraftStore,
 ): void {
   bot.command("pair", async (ctx) => {
+    if (!ctx.chat || !ctx.from) return;
+
+    const role = (ctx.match ?? "").trim().toLowerCase();
+    if (role === "") {
+      await replyPairStatus(ctx, db);
+      return;
+    }
+    if (role !== "source" && role !== "target") {
+      await ctx.reply(
+        t`Usage: /pair source or /pair target (run inside the group). /pair alone shows pairing status.`,
+      );
+      return;
+    }
     if (!(await requireChatAdmin(ctx))) {
       await ctx.reply(t`Only chat admins can configure pairs.`);
       return;
     }
-    if (!ctx.chat || !ctx.from) return;
     if (ctx.chat.type === "private") {
       await ctx.reply(
         t`Run /pair source or /pair target inside the group chats to link.`,
-      );
-      return;
-    }
-
-    const role = (ctx.match ?? "").trim().toLowerCase();
-    if (role !== "source" && role !== "target") {
-      await ctx.reply(
-        t`Usage: /pair source or /pair target (run inside the group).`,
       );
       return;
     }

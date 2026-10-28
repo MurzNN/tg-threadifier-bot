@@ -32,6 +32,32 @@ Primary stack: **TypeScript** + **GrammY** + **Hono** + **Drizzle** + **Lingui**
 10. **No drive-by scope:** stick to the roadmap; extra features stay behind explicit milestones.
 11. When changing behavior, update the matching doc (`workflows`, `architecture`, `testing`, or `roadmap`) in the same change set.
 
+## Slash-command change
+
+Behavior for `/pair`, `/unpair`, and `/status` is [docs/workflows.md](docs/workflows.md) Flow C. Invariants are [docs/architecture.md](docs/architecture.md#operator-commands).
+
+Read only:
+
+- `src/bot/commands/pair.ts`
+- `src/db/chatPairs.ts`
+- `tests/unit/pair.test.ts`
+
+Defaults unless the task says otherwise:
+
+- Command replies are plain `ctx.reply` text.
+- A no-argument read (`/pair`, `/status`) is available to anyone who can send it. `/pair source`, `/pair target`, and `/unpair` stay admin-gated.
+- Pairs are global rows in `chat_pairs`. "All pairs" includes disabled and env-seeded rows. There is no configuring-user column; add one only when the task asks to attribute a pair to an operator.
+
+After user-facing copy changes:
+
+1. `nub run i18n:extract` then `nub run i18n:compile`
+2. Extend `tests/unit/pair.test.ts` and run that file
+3. Update the Flow C table
+
+Update the architecture configuration sentence or the README operator line only when that sentence would become wrong.
+
+Leave relocate, ingest, `drizzle/*.sql`, and `src/locales/en/messages.ts` alone. `src/db/schema.ts` is the schema source of truth unless the task adds a column.
+
 ## Out of scope (unless roadmap says otherwise)
 
 - Auto-detecting offtopic with ML/NLP

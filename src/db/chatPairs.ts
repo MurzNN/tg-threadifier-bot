@@ -1,4 +1,4 @@
-import { and, eq, or } from "drizzle-orm";
+import { and, asc, desc, eq, or } from "drizzle-orm";
 
 import type { AppDb } from "./client.js";
 import { chatPairs } from "./schema.js";
@@ -90,6 +90,30 @@ export async function listEnabledPairs(db: AppDb): Promise<ChatPair[]> {
     .select()
     .from(chatPairs)
     .where(eq(chatPairs.enabled, true));
+  return rows.map(mapRow);
+}
+
+/** Every stored pair, including ones disabled with `/unpair`. */
+export async function listChatPairs(db: AppDb): Promise<ChatPair[]> {
+  const rows = await db.select().from(chatPairs).orderBy(asc(chatPairs.id));
+  return rows.map(mapRow);
+}
+
+/** Pairs that include this chat. Enabled rows come first. */
+export async function listPairsForChat(
+  db: AppDb,
+  chatId: number,
+): Promise<ChatPair[]> {
+  const rows = await db
+    .select()
+    .from(chatPairs)
+    .where(
+      or(
+        eq(chatPairs.sourceChatId, chatId),
+        eq(chatPairs.targetChatId, chatId),
+      ),
+    )
+    .orderBy(desc(chatPairs.enabled), asc(chatPairs.id));
   return rows.map(mapRow);
 }
 

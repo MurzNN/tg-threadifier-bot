@@ -45,7 +45,7 @@ nub run dev            # long polling + GET /health on PORT (default 3000)
 
 Useful scripts: `nub run typecheck`, `nub run lint`, `nub run i18n:extract`, `nub run i18n:compile`, `nub run db:studio` (local PGlite at `file:./data/threadifier-pg` unless `DATABASE_URL` is a Postgres URL), `nub run build` / `nub run start`. Nub loads `.env` automatically when running scripts/files.
 
-Operators bind chats with `/pair` / `/unpair` / `/status` (or `SOURCE_CHAT_ID` / `TARGET_CHAT_ID`) until the Mini App (M4).
+Operators bind chats with `/pair source` and `/pair target` (or `SOURCE_CHAT_ID` / `TARGET_CHAT_ID`), review them with `/pair` or `/status`, and disable them with `/unpair` until the Mini App (M4).
 
 ### Docker & Helm
 

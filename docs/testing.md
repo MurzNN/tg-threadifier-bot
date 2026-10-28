@@ -48,6 +48,8 @@ scripts/
 
 M0 sample: `tests/unit/start.test.ts` records `sendMessage` for `/start` against the English Lingui default.
 
+Command handlers: `tests/unit/pair.test.ts`. It uses in-memory PGlite from `createTestDb()` (`tests/helpers/db.ts`), `createBot` with `botInfo` set, an API transformer that records outgoing calls, and `bot.handleUpdate` for group and private updates. Assert `sendMessage` text with `expect.stringContaining` on stable English fragments. For a slash-command change, run that file before `nub run test`.
+
 ---
 
 ## Integration (local Bot API emulator)

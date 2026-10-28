@@ -175,10 +175,11 @@ Until the Mini App lands, operators configure a pair with:
 | Mechanism | Behavior |
 |-----------|----------|
 | Env seed | On boot, if `SOURCE_CHAT_ID` and `TARGET_CHAT_ID` are set, upsert an enabled `chat_pairs` row (idempotent). |
+| `/pair` | No arguments. In a private chat: list every stored pair (id, enabled or disabled, source and target titles and ids), including pairs set by any operator or by env seed. In a group: report this chat's pairing — its role, whether the pair is enabled, and both chats' titles and ids. If the chat is in more than one pair, list each. Anyone who can send the command may read this; it does not change config. |
 | `/pair source` | In a group where the caller is admin: set this chat as `sourceChat` (completes or updates the active pair). |
 | `/pair target` | Same for `targetChat`. |
 | `/status` | Show the enabled pair (ids, titles) and whether this chat is source, target, or neither. |
-| `/unpair` | Soft-disable (`enabled=false`) the pair that includes this chat. |
+| `/unpair` | Soft-disable (`enabled=false`) the pair that includes this chat. Disabled pairs stay in the `/pair` status list. |
 
 Admin check uses Telegram chat member status (`creator` / `administrator`). Bot must already be a member of both chats. Message ingest starts for chats that appear in an enabled pair.
 

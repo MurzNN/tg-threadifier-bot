@@ -11,6 +11,23 @@ msgstr ""
 msgid "— {authorName}"
 msgstr "— {authorName}"
 
+#. placeholder {0}: pair.id
+#: src/bot/commands/pair.ts:66
+msgid "#{0} (disabled): {source} → {target}"
+msgstr "#{0} (disabled): {source} → {target}"
+
+#. placeholder {0}: pair.id
+#: src/bot/commands/pair.ts:64
+msgid "#{0} (enabled): {source} → {target}"
+msgstr "#{0} (enabled): {source} → {target}"
+
+#. placeholder {0}: lines.join("\n")
+#: src/bot/commands/pair.ts:97
+msgid "Configured pairs:\n"
+"{0}"
+msgstr "Configured pairs:\n"
+"{0}"
+
 #: src/bot/relocate/templates.ts:84
 msgid "Could not finish relocating this discussion (stopped at {phase}). No further messages were deleted."
 msgstr "Could not finish relocating this discussion (stopped at {phase}). No further messages were deleted."
@@ -19,12 +36,12 @@ msgstr "Could not finish relocating this discussion (stopped at {phase}). No fur
 msgid "Could not match these forwards to stored source messages, so nothing was deleted. The bot only relocates messages it has already seen."
 msgstr "Could not match these forwards to stored source messages, so nothing was deleted. The bot only relocates messages it has already seen."
 
-#: src/bot/commands/pair.ts:119
+#: src/bot/commands/pair.ts:190
 msgid "Disabled {n} chat pair(s) involving this chat."
 msgstr "Disabled {n} chat pair(s) involving this chat."
 
 #. placeholder {0}: lines.join("\n")
-#: src/bot/commands/pair.ts:154
+#: src/bot/commands/pair.ts:225
 msgid "Enabled pairs:\n"
 "{0}"
 msgstr "Enabled pairs:\n"
@@ -34,34 +51,38 @@ msgstr "Enabled pairs:\n"
 msgid "Media message"
 msgstr "Media message"
 
-#: src/bot/commands/pair.ts:126
+#: src/bot/commands/pair.ts:92
+msgid "No chat pairs configured. Run /pair source and /pair target inside the group chats to link."
+msgstr "No chat pairs configured. Run /pair source and /pair target inside the group chats to link."
+
+#: src/bot/commands/pair.ts:197
 msgid "No enabled chat pairs. Use /pair source and /pair target, or set SOURCE_CHAT_ID and TARGET_CHAT_ID."
 msgstr "No enabled chat pairs. Use /pair source and /pair target, or set SOURCE_CHAT_ID and TARGET_CHAT_ID."
 
-#: src/bot/commands/pair.ts:115
+#: src/bot/commands/pair.ts:186
 msgid "No enabled pair includes this chat."
 msgstr "No enabled pair includes this chat."
 
-#: src/bot/commands/pair.ts:59
-#: src/bot/commands/pair.ts:106
+#: src/bot/commands/pair.ts:139
+#: src/bot/commands/pair.ts:177
 msgid "Only chat admins can configure pairs."
 msgstr "Only chat admins can configure pairs."
 
 #. placeholder {0}: pair.sourceChatId
 #. placeholder {1}: pair.targetChatId
-#: src/bot/commands/pair.ts:47
+#: src/bot/commands/pair.ts:50
 msgid "Pair enabled: source {0} → target {1}. Ingest is active for both chats."
 msgstr "Pair enabled: source {0} → target {1}. Ingest is active for both chats."
 
-#: src/bot/commands/pair.ts:65
+#: src/bot/commands/pair.ts:144
 msgid "Run /pair source or /pair target inside the group chats to link."
 msgstr "Run /pair source or /pair target inside the group chats to link."
 
-#: src/bot/commands/pair.ts:110
+#: src/bot/commands/pair.ts:181
 msgid "Run /unpair inside a linked source or target chat."
 msgstr "Run /unpair inside a linked source or target chat."
 
-#: src/bot/commands/pair.ts:31
+#: src/bot/commands/pair.ts:34
 msgid "Source and target must be different chats. Use /pair again in each chat."
 msgstr "Source and target must be different chats. Use /pair again in each chat."
 
@@ -70,7 +91,7 @@ msgid "source chat"
 msgstr "source chat"
 
 #. placeholder {0}: ctx.chat.id
-#: src/bot/commands/pair.ts:90
+#: src/bot/commands/pair.ts:161
 msgid "Source chat recorded ({0}). Now run /pair target in the helper chat."
 msgstr "Source chat recorded ({0}). Now run /pair target in the helper chat."
 
@@ -79,7 +100,7 @@ msgid "target chat"
 msgstr "target chat"
 
 #. placeholder {0}: ctx.chat.id
-#: src/bot/commands/pair.ts:100
+#: src/bot/commands/pair.ts:171
 msgid "Target chat recorded ({0}). Now run /pair source in the main chat."
 msgstr "Target chat recorded ({0}). Now run /pair source in the main chat."
 
@@ -88,16 +109,64 @@ msgid "The message \"{topicLabel}\" from <a href=\"{linkToUser}\">{userDisplayNa
 msgstr "The message \"{topicLabel}\" from <a href=\"{linkToUser}\">{userDisplayName}</a> with responses forwarded to the chat <a href=\"{linkToTargetChatThread}\">{targetChatName}</a>. Please continue the conversation there."
 
 #. placeholder {0}: pairs.length
-#: src/bot/commands/pair.ts:135
+#. placeholder {1}: blocks.join("\n\n")
+#: src/bot/commands/pair.ts:115
+msgid "This chat is in {0} pairs:\n"
+"{1}"
+msgstr "This chat is in {0} pairs:\n"
+"{1}"
+
+#. placeholder {0}: pairs.length
+#: src/bot/commands/pair.ts:206
 msgid "This chat is not in an enabled pair. Enabled pairs: {0}."
 msgstr "This chat is not in an enabled pair. Enabled pairs: {0}."
+
+#: src/bot/commands/pair.ts:105
+msgid "This chat is not paired. Admins can run /pair source or /pair target here."
+msgstr "This chat is not paired. Admins can run /pair source or /pair target here."
 
 #. placeholder {0}: here.id
 #. placeholder {1}: here.sourceChatId
 #. placeholder {2}: here.targetChatId
-#: src/bot/commands/pair.ts:146
+#: src/bot/commands/pair.ts:217
 msgid "This chat is the {role} in pair #{0}: {1} → {2}."
 msgstr "This chat is the {role} in pair #{0}: {1} → {2}."
+
+#. placeholder {0}: pair.id
+#: src/bot/commands/pair.ts:76
+msgid "This chat is the source in pair #{0} (disabled).\n"
+"Source: {source}\n"
+"Target: {target}"
+msgstr "This chat is the source in pair #{0} (disabled).\n"
+"Source: {source}\n"
+"Target: {target}"
+
+#. placeholder {0}: pair.id
+#: src/bot/commands/pair.ts:74
+msgid "This chat is the source in pair #{0} (enabled).\n"
+"Source: {source}\n"
+"Target: {target}"
+msgstr "This chat is the source in pair #{0} (enabled).\n"
+"Source: {source}\n"
+"Target: {target}"
+
+#. placeholder {0}: pair.id
+#: src/bot/commands/pair.ts:81
+msgid "This chat is the target in pair #{0} (disabled).\n"
+"Source: {source}\n"
+"Target: {target}"
+msgstr "This chat is the target in pair #{0} (disabled).\n"
+"Source: {source}\n"
+"Target: {target}"
+
+#. placeholder {0}: pair.id
+#: src/bot/commands/pair.ts:79
+msgid "This chat is the target in pair #{0} (enabled).\n"
+"Source: {source}\n"
+"Target: {target}"
+msgstr "This chat is the target in pair #{0} (enabled).\n"
+"Source: {source}\n"
+"Target: {target}"
 
 #: src/bot/relocate/templates.ts:59
 msgid "Thread: {threadTitle}\n"
@@ -107,13 +176,13 @@ msgstr "Thread: {threadTitle}\n"
 "Initiated by the user <a href=\"{linkToUser}\">{userDisplayName}</a> in the chat <a href=\"{linkToSourceChat}\">{sourceChatName}</a>.\n"
 "<a href=\"{threadLink}\">Thread link</a>."
 
-#: src/bot.ts:52
+#: src/bot.ts:56
 msgid "Threadifier is online. Admins: /pair source and /pair target in the groups, or set SOURCE_CHAT_ID and TARGET_CHAT_ID. Check /status."
 msgstr "Threadifier is online. Admins: /pair source and /pair target in the groups, or set SOURCE_CHAT_ID and TARGET_CHAT_ID. Check /status."
 
-#: src/bot/commands/pair.ts:73
-msgid "Usage: /pair source or /pair target (run inside the group)."
-msgstr "Usage: /pair source or /pair target (run inside the group)."
+#: src/bot/commands/pair.ts:134
+msgid "Usage: /pair source or /pair target (run inside the group). /pair alone shows pairing status."
+msgstr "Usage: /pair source or /pair target (run inside the group). /pair alone shows pairing status."
 
 #: src/bot/relocate/templates.ts:32
 msgid "user"
