@@ -67,14 +67,16 @@ Granular milestones. Order is dependency-aware; checkboxes are for tracking impl
 ## M4 — Operator configuration (Mini App)
 
 - [ ] Hono serves Vite React SPA (static) + config API in the same process
-- [ ] Minimal Mini App UI: select/confirm source & target (no SSR)
+- [ ] Minimal Mini App UI: select/confirm source & target (no SSR); UI strings via Lingui
 - [ ] Backend validation of WebApp `initData` (Zod)
 - [ ] Persist `chat_pairs`; remove reliance on hard-coded env pair for normal ops
+- [ ] Message template override UI + API (`message_template_overrides`); placeholder validation; reset to defaults
+- [ ] Render path: override → locale default → `en` default
 - [ ] Confirmation messages / `/status` for operators
-- [ ] Integration / API-level `C1_pair_config`
+- [ ] Integration / API-level `C1_pair_config` (+ template override smoke)
 - [ ] Document required bot admin rights in README
 
-**Exit:** Non-dev admin can link chats without redeploying env for IDs.
+**Exit:** Non-dev admin can link chats and customize bot templates without redeploying.
 
 ---
 
@@ -101,7 +103,7 @@ Granular milestones. Order is dependency-aware; checkboxes are for tracking impl
 - [ ] Multiple target chats / topic-specific helpers per source
 - [ ] Multi-tenant hosting (many unrelated communities on one deployment)
 - [ ] Moderator “preview / confirm” before deletes
-- [ ] Additional Lingui locales (beyond initial `en`) + per-chat/pair locale setting UX
+- [ ] Additional Lingui locales (beyond initial `en`) + per-chat/pair locale setting UX (overrides remain per locale)
 - [ ] Metrics dashboard
 - [ ] Mini App UI automation inside Telegram WebView (if still needed beyond `C1` API tests)
 

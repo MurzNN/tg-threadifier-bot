@@ -2,7 +2,7 @@
 
 Normative user journeys and bot behavior. Message templates use Telegram `parse_mode: HTML` for markup.
 
-Copy shown below is the **English** meaning reference. Runtime strings are served via **Lingui** catalogs (see [architecture.md](architecture.md#internationalization-lingui)); do not hardcode these templates in TypeScript.
+Copy shown below is the **English default** meaning reference. Defaults are **translatable** via **Lingui** catalogs; operators may **override** bot message templates in the Mini App (same placeholders). Do not hardcode templates in TypeScript. See [architecture.md](architecture.md#internationalization--templates).
 
 ## Naming & template placeholders
 
@@ -172,13 +172,15 @@ Target chat stays thread-oriented; accidental top-level posts are recoverable wi
 1. Authenticate as chat admin (Telegram WebApp / deep-link proof as designed).
 2. Select or confirm `sourceChat`.
 3. Select or confirm `targetChat`.
-4. Optionally enable AI thread titles for this pair (if the deployment supports AI).
-5. Bot stores the link; optionally posts a confirmation in both chats.
-6. Bot begins (or continues) persisting messages for those chats.
+4. Optionally set locale for the pair / community.
+5. Optionally **override message templates** (thread header, source notice, Flow B prompt, etc.) — edit text while keeping required `{placeholders}`; reset restores Lingui defaults for the active locale.
+6. Optionally enable AI thread titles for this pair (if the deployment supports AI).
+7. Bot stores the link and overrides; optionally posts a confirmation in both chats.
+8. Bot begins (or continues) persisting messages for those chats.
 
 ### Outcome
 
-No code/env edit required to point the bot at the community’s chats.
+No code/env edit required to point the bot at the community’s chats or to customize bot wording.
 
 ---
 
@@ -195,6 +197,7 @@ Normative scenario IDs for automated tests. Full harness, emulator vs Test DC de
 | `B1_loose_pick_thread` | B | Loose message attached to recent thread; prompt cleaned |
 | `B2_loose_create_thread` | B | Loose message starts a new thread; original cleaned |
 | `C1_pair_config` | C | Source/target pair persisted and used for ingest |
+| `C2_template_override` | C | Custom template used when posting; reset restores translated default |
 
 ### Flow A observables (Test DC / acceptance)
 

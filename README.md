@@ -23,7 +23,7 @@ Documentation / design phase. Implementation has not started. See [docs/roadmap.
 - **Language:** TypeScript
 - **Bot framework:** [GrammY](https://grammy.dev/)
 - **HTTP:** [Hono](https://hono.dev/) (webhook, health, Mini App, config API)
-- **i18n:** [Lingui](https://lingui.dev/) (all user-facing copy)
+- **i18n:** [Lingui](https://lingui.dev/) for all default bot templates and Mini App UI; operators can override bot templates in the app
 - **DB:** [Drizzle](https://orm.drizzle.team/) — SQLite locally, Postgres in Helm
 - **Mini App:** React + Vite static SPA (same app; no SSR for v1)
 - **Deploy:** Docker image + Helm chart

@@ -21,7 +21,7 @@ That work is repetitive, error-prone under load, and easy to do inconsistently.
 - The bot rebuilds a proper thread in the target, removes intermediate/original clutter, and posts a standardized redirect in the source.
 - In the target chat, the bot also discourages “floating” messages outside threads by offering to attach them to a recent thread or start a new one.
 
-Later, a lightweight Telegram Mini App (or equivalent in-bot config) lets operators wire which chats are source and target without touching deployment config for every pair.
+Later, a lightweight Telegram Mini App (or equivalent in-bot config) lets operators wire which chats are source and target, choose language, and override bot message templates — without touching deployment config for every pair.
 
 ## Goals
 
@@ -33,7 +33,8 @@ Later, a lightweight Telegram Mini App (or equivalent in-bot config) lets operat
 | Keep target structured | Non-threaded messages get an interactive “which thread?” prompt |
 | Be operable by non-devs | Chat pairing via bot UI / Mini App |
 | Be verifiable | Core flows covered by E2E tests on Telegram Test DCs |
-| Be multilingual-ready | All bot/Mini App copy via [Lingui](https://lingui.dev/); English first, more locales later |
+| Be multilingual-ready | All default bot templates and Mini App UI via [Lingui](https://lingui.dev/); English first, more locales later |
+| Configurable templates | Operators override bot message templates in the Mini App; same placeholders; fallback to translated defaults |
 | Minimize custom code | Prefer existing open-source libraries over reinventing wheels; keep owned surface small |
 | Optional AI thread titles | Opt-in short titles/topics via LLM; truncate message text when AI is off or fails |
 
@@ -49,7 +50,7 @@ Later, a lightweight Telegram Mini App (or equivalent in-bot config) lets operat
 
 - **Moderator** — selects and forwards offtopic messages; relies on the bot for the rest.
 - **Regular member** — may post offtopic (source) or continue discussion (target); may hit the “pick a thread” UX in the target.
-- **Operator / admin** — installs the bot, grants rights, links `sourceChat` ↔ `targetChat`.
+- **Operator / admin** — installs the bot, grants rights, links `sourceChat` ↔ `targetChat`, and may customize locales / message templates.
 
 ## Environment (product model)
 

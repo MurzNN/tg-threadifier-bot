@@ -118,6 +118,7 @@ Reserved phones `99966XYYYY` (login code = DC id repeated) exist for disposable 
 | `B1_loose_pick_thread` | Flow B | Callback → forward/delete recorded | Message in thread; loose + prompt gone |
 | `B2_loose_create_thread` | Flow B | Create path recorded | New thread; loose cleaned |
 | `C1_pair_config` | Flow C | Config API + DB `chat_pairs` | Pair active; ingest uses pair (API/commands first; Mini App UI automation later) |
+| `C2_template_override` | Flow C | Save override; render uses override; reset → Lingui default | Same on Test DC if exercised via API |
 
 Expand later as named scenarios: media/albums, permission failures, concurrent loose messages.
 

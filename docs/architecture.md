@@ -71,17 +71,38 @@ One TypeScript schema and Drizzle Kit migrations; dialect selected at boot:
 - **Helm / staging / prod default:** Postgres
 - Do **not** run multiple app replicas against SQLite (single-writer)
 
-## Internationalization (Lingui)
+## Internationalization & templates
 
-All user-facing bot copy (thread headers, source redirect notices, Flow B prompts, button labels, errors, Mini App UI strings) must go through **Lingui** — no hardcoded locale strings in workflow code.
+### Translatable by default
+
+**All** default bot message templates and Mini App UI strings must be translatable — no hardcoded user-facing copy in TypeScript.
+
+| Surface | Examples |
+|---------|----------|
+| Bot message templates | Thread header, source redirect notice, Flow B prompt, button labels, errors, `/start` |
+| Mini App UI | Labels, buttons, help text, validation errors, template editor |
+
+Defaults ship as **Lingui** catalogs (English first; more locales later). Placeholders use **single braces** and **camelCase**: `{threadTitle}` — see [workflows.md](workflows.md#naming--template-placeholders).
+
+### Operator overrides (configurable templates)
+
+Operators must be able to **override** default message templates in the Mini App (per `chat_pairs` / community), without a redeploy:
+
+- Editable templates include at least: thread header, source redirect notice, Flow B prompt text, and related button label strings where product-useful.
+- Overrides keep the same `{placeholder}` contract; the UI should list allowed placeholders and validate that required ones remain present.
+- Telegram HTML in overrides is allowed within the same subset as defaults; sanitize / validate on save.
+- **Resolution order** when rendering a message: operator override for the active locale (if any) → Lingui default for that locale → English Lingui default.
+- Clearing an override restores the built-in (translated) default.
+- Mini App UI chrome itself stays Lingui-driven (translated); only bot **message templates** are operator-overridable unless we later expose more keys.
+
+Store overrides in the DB (e.g. `message_template_overrides`: `chat_pair_id`, `templateKey`, `locale`, `body`). Do not invent a second i18n framework for overrides — interpolate with the same placeholder rules as Lingui/ICU-style `{name}`.
 
 ### Conventions
 
-- Prefer Lingui macros (`t`, `msg`, `Trans` in the Mini App) so catalogs stay extractable.
-- Placeholders use **single braces** and **camelCase**: `{threadTitle}` (ICU / Lingui). See [workflows.md](workflows.md#naming--template-placeholders).
-- Keep Telegram HTML (`<a href="...">`, etc.) inside translated messages; translators must preserve placeholders and tags. Escape user-derived values before interpolation.
+- Prefer Lingui macros (`t`, `msg`, `Trans` in the Mini App) for defaults and UI so catalogs stay extractable.
+- Keep Telegram HTML (`<a href="...">`, etc.) inside messages; translators and operators must preserve placeholders and tags. Escape user-derived values before interpolation.
 - Dynamic parts include `threadTitle`, `topicLabel`, `userDisplayName`, `threadLink`, chat titles.
-- Message templates in `workflows.md` are the **English source** of truth for meaning; Lingui catalogs are the runtime source. When copy changes, update English catalog + workflows together.
+- Message templates in `workflows.md` are the **English meaning** reference for defaults; Lingui catalogs are the shipped defaults; DB overrides are the per-community runtime customization.
 - Resolve locale per chat or per operator setting (exact rule TBD): start with a default locale (e.g. `en`) and a per-pair (or per-chat) override once config exists.
 - Ship with at least one complete locale catalog from day one of string introduction; additional languages are a product milestone, not a reason to bypass Lingui early.
 
@@ -89,6 +110,7 @@ All user-facing bot copy (thread headers, source redirect notices, Flow B prompt
 
 - Extract / compile catalogs in the normal build or a dedicated `lingui extract` / `lingui compile` script.
 - Unit-test critical messages with a fixed locale to lock placeholder wiring (links, truncation labels).
+- Unit/integration tests for override resolution (override wins; missing override falls back; invalid placeholder rejected on save).
 
 ## High-level components
 
@@ -205,12 +227,13 @@ Jobs stuck mid-state should be inspectable (admin command or logs). Prefer retri
 
 ### Mini App (same app)
 
-- Purpose: let an admin pick/link `sourceChat` and `targetChat`.
+- Purpose: let an admin pick/link `sourceChat` and `targetChat`, choose locale, and **edit/override bot message templates**.
 - **Same deployable** as the bot: Hono serves the Vite-built static SPA and the config API that validates Telegram WebApp `initData`.
 - **No SSR for v1** — WebView cold start and the Telegram `WebApp` bridge dominate latency for this small admin UI; a lean SPA is enough. Revisit only if measured load time requires it.
-- Writes only to `chat_pairs` (+ maybe invite/deep-link helpers).
+- Writes to `chat_pairs`, `message_template_overrides` (+ maybe invite/deep-link helpers).
+- Mini App chrome is fully Lingui-translated; template editor shows default (translated) text and allows saving overrides.
 
-Exact UI is roadmap work; architecture only requires a validated write path into config storage in-process with the bot.
+Exact UI is roadmap work; architecture requires validated write paths for pairing and template overrides in-process with the bot.
 
 ## Deployment
 
