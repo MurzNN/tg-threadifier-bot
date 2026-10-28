@@ -2,6 +2,7 @@ import { Bot, type Context } from "grammy";
 import { t } from "@lingui/core/macro";
 
 import { registerPairCommands } from "./bot/commands/pair.js";
+import { createIngestMiddleware } from "./bot/ingest.js";
 import { PairDraftStore } from "./db/chatPairs.js";
 import type { AppDb } from "./db/client.js";
 import type { Logger } from "./logger.js";
@@ -13,7 +14,7 @@ export type BotDeps = {
   pairDrafts?: PairDraftStore;
 };
 
-/** Create a GrammY bot with /start and chat-pair operator commands. */
+/** Create a GrammY bot with /start, pair commands, and ingest middleware. */
 export function createBot({
   token,
   logger,
@@ -21,6 +22,8 @@ export function createBot({
   pairDrafts = new PairDraftStore(),
 }: BotDeps): Bot {
   const bot = new Bot(token);
+
+  bot.use(createIngestMiddleware(db, logger));
 
   bot.command("start", async (ctx: Context) => {
     await ctx.reply(
