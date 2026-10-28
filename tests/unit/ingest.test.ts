@@ -39,7 +39,7 @@ describe("ingest middleware", () => {
     const logger = createLogger({ LOG_LEVEL: "silent", NODE_ENV: "test" });
     bot = createBot({ token: "test:token", logger, db: handle.db });
     bot.botInfo = botInfo;
-    bot.api.config.use(async (_prev, method) => {
+    bot.api.config.use(async (_prev, _method) => {
       return { ok: true, result: true } as Awaited<ReturnType<ApiCallFn>>;
     });
     await bot.init();
