@@ -20,16 +20,16 @@ Granular milestones. Order is dependency-aware; checkboxes are for tracking impl
 
 ---
 
-## M1 — Persistence & ingest
+## M1 — Persistence & ingest ✅
 
-- [ ] Drizzle schema + Kit migrations for `messages`, `chat_pairs`, `threads` (+ optional `relocation_jobs`)
-- [ ] Dual dialect boot: SQLite (local default) + Postgres (URL-driven)
-- [ ] GrammY middleware: upsert messages from configured chats
-- [ ] Env-based temporary chat pair (until Mini App) for local/Test DC use
-- [ ] Unit tests for fingerprint / truncation helpers
-- [ ] Integration scaffold: local Bot API emulator + SQLite smoke
+- [x] Drizzle schema + Kit migrations for `messages`, `chat_pairs`, `threads` (+ optional `relocation_jobs`)
+- [x] Postgres dialect boot: PGlite (local default) + Postgres URL (Helm/prod)
+- [x] GrammY middleware: upsert messages from configured chats
+- [x] Temporary chat-pair config until Mini App: **env seed** (`SOURCE_CHAT_ID` / `TARGET_CHAT_ID`) **and** operator slash commands (`/pair`, `/unpair`, `/status`) that persist to `chat_pairs`
+- [x] Unit tests for fingerprint / truncation helpers
+- [x] Integration scaffold: PGlite persistence smoke (Bot API emulator HTTP wiring deferred to M2 Flow A scenarios)
 
-**Exit:** Bot online in two chats stores every message it sees; unit + emulator smoke pass in CI.
+**Exit:** Bot online in two chats stores every message it sees; unit + PGlite smoke pass in CI.
 
 ---
 
