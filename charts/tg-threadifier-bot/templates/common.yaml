@@ -1,0 +1,13 @@
+---
+{{- include "bjw-s.common.loader.init" . }}
+
+{{- define "tg-threadifier-bot.hardcodedValues" -}}
+# Match app-template: default nameOverride to the release name.
+{{ if not .Values.global.nameOverride }}
+global:
+  nameOverride: "{{ .Release.Name }}"
+{{ end }}
+{{- end -}}
+{{- $_ := mergeOverwrite .Values (include "tg-threadifier-bot.hardcodedValues" . | fromYaml) -}}
+
+{{ include "bjw-s.common.loader.generate" . }}

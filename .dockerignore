@@ -3,12 +3,16 @@ node_modules
 .github
 coverage
 dist
+data
 .env
 .env.*
+!.env.example
 *.md
 !package.json
 docs
 tests
+charts
 *.session
 .cursor
 .vscode
+agent-transcripts

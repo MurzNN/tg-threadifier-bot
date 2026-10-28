@@ -240,12 +240,12 @@ Exact UI is roadmap work; architecture requires validated write paths for pairin
 | Artifact | Role |
 |----------|------|
 | **Docker image** | Single container packaging the Node app (bot + Mini App static build + migrations entrypoint as designed) |
-| **Helm chart** | Kubernetes deploy: Deployment/Service/Ingress, secrets for `BOT_TOKEN`, Postgres URL, public Mini App URL, probes/health |
+| **Helm chart** | `charts/tg-threadifier-bot` — [bjw-s common / app-template](https://bjw-s-labs.github.io/helm-charts/docs/app-template/) library; secrets for `BOT_TOKEN` + `DATABASE_URL`; optional in-cluster Postgres; ingress + `WEBAPP_URL` for Mini App; `/health` probes |
 
 Guidelines:
 
 - One image tag = one releasable version of bot + Mini App together (no split versioning).
-- Prefer existing community Helm patterns / chart helpers where they fit; keep values.yaml focused on Telegram token, DB, ingress host, and resource limits.
+- Chart depends on `common` 5.3.0 (`oci://ghcr.io/bjw-s-labs/helm`); run `helm dependency build` before install. Values stay focused on token, DB, ingress host, and resources.
 - Local/dev may run the app without Kubernetes; Docker remains the canonical runtime shape for staging/prod.
 - Helm defaults to **Postgres**; local defaults to **PGlite** (same dialect).
 
@@ -284,7 +284,7 @@ Record decisions here when closed:
 2. Exact forward-origin fields available for channel/group forwards in Bot API version in use
 3. Batching window for multi-forward detection
 4. Retention / pruning policy for `messages` table
-5. Helm chart layout (umbrella vs single chart) and ingress/TLS conventions for the target cluster
+5. ~~Helm chart layout~~ → single chart under `charts/tg-threadifier-bot` depending on [bjw-s common](https://bjw-s-labs.github.io/helm-charts/docs/app-template/) (app-template library); optional in-chart Postgres StatefulSet; ingress host left to the target cluster
 6. Which local Bot API emulator to standardize on after evaluating method coverage (`forwardMessage`, `deleteMessage`, callbacks, …)
 7. LLM provider / model for optional AI titles (and max token / latency budgets)
 8. Header max length and `{topicLabel}` truncation length beyond the Flow B 12-char button rule

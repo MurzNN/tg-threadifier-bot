@@ -6,6 +6,7 @@ export async function createTestDb(): Promise<DbHandle> {
     BOT_TOKEN: "test:token",
     PORT: 3000,
     LOG_LEVEL: "silent",
+    TELEGRAM_ENVIRONMENT: "prod",
     NODE_ENV: "test",
     DATABASE_URL: "memory://",
   });

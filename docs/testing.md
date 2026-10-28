@@ -20,19 +20,22 @@ See also: [workflows.md](workflows.md) (Flow D scenario IDs), [architecture.md](
 
 ---
 
-## Package layout (planned)
+## Package layout
 
 ```
 tests/
   unit/           # transformers
   integration/    # local Bot API emulator + PGlite
   e2e/
-    scenarios/    # Test DC acceptance (A1, B1, …)
-    harness/      # bot bootstrap, mtcute clients, chat factory, asserts
+    smoke.test.ts # live getMe (skipped without secrets)
+    harness/      # grammY test env + E2E env helpers
+    scenarios/    # (M5) Test DC acceptance (A1, B1, …)
   helpers/        # shared fixtures / scenario IDs
 scripts/
   e2e-login.ts    # one-shot mtcute testMode login → session secret
 ```
+
+`nub run test` includes e2e files; live cases use `it.skipIf(!hasE2eSecrets())`. `nub run test:e2e` runs only `tests/e2e`. Login: `nub add -D @mtcute/node` then `nub run e2e:login`.
 
 ---
 

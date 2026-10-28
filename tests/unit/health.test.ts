@@ -9,7 +9,7 @@ describe("HTTP health", () => {
     expect(res.status).toBe(200);
     await expect(res.json()).resolves.toEqual({
       ok: true,
-      service: "threadifier-bot",
+      service: "tg-threadifier-bot",
     });
   });
 });

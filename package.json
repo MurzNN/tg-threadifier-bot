@@ -1,5 +1,5 @@
 {
-  "name": "threadifier-bot",
+  "name": "tg-threadifier-bot",
   "version": "0.3.0",
   "private": true,
   "description": "Telegram bot that relocates offtopic discussions into helper-chat threads",
@@ -28,6 +28,8 @@
     "db:studio": "drizzle-kit studio",
     "test": "nub run i18n:compile && vitest run",
     "test:watch": "vitest",
+    "test:e2e": "nub run i18n:compile && vitest run tests/e2e",
+    "e2e:login": "vite-node scripts/e2e-login.ts",
     "release": "release-it",
     "release:ci": "release-it --ci"
   },

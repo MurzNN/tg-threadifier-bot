@@ -132,7 +132,7 @@ Releases are automated with [release-it](https://github.com/release-it/release-i
 | Changelog | Updates `CHANGELOG.md` |
 | Git | Commit `chore(release): vX.Y.Z` + tag `vX.Y.Z` |
 | GitHub | Creates a GitHub Release |
-| Container | Pushes `ghcr.io/<owner>/threadifier-bot` tagged `latest`, `X.Y.Z`, and `vX.Y.Z` |
+| Container | Pushes `ghcr.io/<owner>/tg-threadifier-bot` tagged `latest`, `X.Y.Z`, and `vX.Y.Z` |
 
 **CI workflows:**
 

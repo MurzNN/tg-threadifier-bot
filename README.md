@@ -16,7 +16,7 @@ See [docs/workflows.md](docs/workflows.md) for full scenarios, including “no l
 
 ## Status
 
-**M0 scaffold complete:** TypeScript + GrammY + Hono no-op bot answers `/start` (Lingui `en`), Zod env, pino logs, Vitest transformer sample. Persistence and relocate workflows are next — [docs/roadmap.md](docs/roadmap.md).
+**M1 + M1.5 packaging:** Persistence (PGlite/Postgres), `/pair` commands, Docker image, Helm chart ([bjw-s app-template](https://bjw-s-labs.github.io/helm-charts/docs/app-template/)), Test DC harness scaffold. Flow A relocate is next — [docs/roadmap.md](docs/roadmap.md).
 
 ## Stack
 
@@ -45,12 +45,26 @@ nub run dev            # long polling + GET /health on PORT (default 3000)
 
 Useful scripts: `nub run typecheck`, `nub run lint`, `nub run i18n:extract`, `nub run i18n:compile`, `nub run build` / `nub run start`. Nub loads `.env` automatically when running scripts/files.
 
-Operators will bind chats via the Mini App (roadmap M4), not by editing code. Until then the bot only answers `/start`.
+Operators bind chats with `/pair` / `/unpair` / `/status` (or `SOURCE_CHAT_ID` / `TARGET_CHAT_ID`) until the Mini App (M4).
+
+### Docker & Helm
+
+```bash
+docker build -t tg-threadifier-bot:local .
+
+helm dependency update ./charts/tg-threadifier-bot
+helm upgrade --install threadifier ./charts/tg-threadifier-bot \
+  --namespace threadifier --create-namespace \
+  --set secrets.credentials.stringData.BOT_TOKEN='…' \
+  --set secrets.credentials.stringData.DATABASE_URL='postgresql://threadifier:changeme@threadifier-postgres:5432/threadifier'
+```
+
+Chart details: [charts/tg-threadifier-bot/README.md](charts/tg-threadifier-bot/README.md). Image publishes to GHCR on release.
 
 ### CI & releases
 
 - **CI:** GitHub Actions (`nubjs/setup-nub`) runs typecheck, lint, and `nub run test` on PRs and `main`.
-- **Release:** [release-it](https://github.com/release-it/release-it) on `main` updates `CHANGELOG.md`, tags, creates a GitHub Release, and publishes `ghcr.io/<owner>/threadifier-bot` when Conventional Commits warrant a bump (or via workflow_dispatch `increment`). See [docs/contributing.md](docs/contributing.md#releases--versioning).
+- **Release:** [release-it](https://github.com/release-it/release-it) on `main` updates `CHANGELOG.md`, tags, creates a GitHub Release, and publishes `ghcr.io/<owner>/tg-threadifier-bot` when Conventional Commits warrant a bump (or via workflow_dispatch `increment`). See [docs/contributing.md](docs/contributing.md#releases--versioning).
 
 ## Docs
 

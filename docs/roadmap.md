@@ -33,6 +33,18 @@ Granular milestones. Order is dependency-aware; checkboxes are for tracking impl
 
 ---
 
+## M1.5 — Packaging for manual testing
+
+Moved earlier so Flow A/B work can be exercised on a real cluster / Test DC without waiting for Mini App.
+
+- [x] Dockerfile for the single app image (bot; Mini App assets later in M4)
+- [x] Helm chart via [bjw-s app-template / common](https://bjw-s-labs.github.io/helm-charts/docs/app-template/) (token, **Postgres**, ingress/Mini App URL, probes)
+- [x] Test DC E2E harness scaffold: grammY `environment: "test"` + mtcute `testMode` (+ `scripts/e2e-login.ts`)
+
+**Exit:** `helm install` deploys the bot against Postgres; developers can smoke Test DC login/getMe.
+
+---
+
 ## M2 — Flow A core (relocate)
 
 - [ ] Detect forwards into `targetChat` and match to stored `sourceChat` messages
@@ -77,17 +89,14 @@ Granular milestones. Order is dependency-aware; checkboxes are for tracking impl
 - [ ] Confirmation messages / `/status` for operators
 - [ ] Integration / API-level `C1_pair_config` (+ template override smoke)
 - [ ] Document required bot admin rights in README
+- [ ] Image build includes Mini App static assets
 
 **Exit:** Non-dev admin can link chats and customize bot templates without redeploying.
 
 ---
 
-## M5 — Packaging, hardening & E2E automation
+## M5 — Hardening & E2E automation
 
-- [ ] Dockerfile for the single app image (bot + Mini App assets)
-- [ ] Helm chart (token, **Postgres**, ingress/Mini App URL, probes)
-- [ ] Test DC E2E harness: grammY `environment: "test"` + mtcute `testMode`
-- [ ] `scripts/e2e-login.ts` + documented secrets
 - [ ] Automated scenarios `A1`–`A3`, `B1`–`B2`, `C1` green on Test DC (`A4` when AI lands)
 - [ ] CI: PR = unit + emulator integration; nightly/protected = E2E
 - [ ] Idempotent retries / stuck-job inspection command
@@ -95,7 +104,7 @@ Granular milestones. Order is dependency-aware; checkboxes are for tracking impl
 - [ ] Retention/pruning policy for `messages`
 - [ ] README quickstart filled with real commands (local + Helm)
 
-**Exit:** Image + chart deploy a working bot/Mini App; **release bar** = Test DC scenario suite green.
+**Exit:** **Release bar** = Test DC scenario suite green; packaging already landed in M1.5.
 
 ---
 
@@ -115,4 +124,4 @@ Do not start M6 items until M2–M5 priorities are met unless product urgency sa
 
 ## Suggested first implementation slice
 
-Smallest useful demo: **M0 scaffold + M1 ingest + M2 happy path** with text-only messages, env-configured chat pair, Vitest transformers, and emulator-depth `A1`. Mini App, Flow B, and full Test DC automation follow once relocate is trustworthy.
+**M0 + M1 + M1.5 packaging**, then **M2 happy path** with text-only messages, env or `/pair` chat config, Vitest transformers, and emulator-depth `A1`. Mini App and Flow B follow once relocate is trustworthy.

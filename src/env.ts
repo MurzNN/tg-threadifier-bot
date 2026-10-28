@@ -13,10 +13,17 @@ const envSchema = z
       .default("info"),
     NODE_ENV: z.enum(["development", "test", "production"]).optional(),
     /**
+     * grammY Bot API environment. `test` → api.telegram.org/.../test/ (Test DC).
+     * Default `prod` for normal BotFather tokens.
+     */
+    TELEGRAM_ENVIRONMENT: z.enum(["prod", "test"]).default("prod"),
+    /**
      * Postgres URL (`postgres://…`) for Helm/prod, or `file:./path` for local
      * PGlite. Omit → default PGlite at `file:./data/threadifier-pg`.
      */
     DATABASE_URL: z.string().optional(),
+    /** Public origin for Mini App / BotFather Web App URL (M4). */
+    WEBAPP_URL: z.string().url().optional(),
     SOURCE_CHAT_ID: z.coerce.number().optional(),
     TARGET_CHAT_ID: z.coerce.number().optional(),
   })

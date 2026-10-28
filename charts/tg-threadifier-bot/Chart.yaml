@@ -1,0 +1,17 @@
+apiVersion: v2
+name: tg-threadifier-bot
+description: Threadifier Telegram bot — packaging via bjw-s common (app-template)
+type: application
+version: 0.1.0
+appVersion: "0.3.0"
+kubeVersion: ">=1.28.0-0"
+home: https://github.com/MurzNN/tg-threadifier-bot
+sources:
+  - https://github.com/MurzNN/tg-threadifier-bot
+annotations:
+  artifacthub.io/category: streaming-messaging
+dependencies:
+  # Same library that powers https://bjw-s-labs.github.io/helm-charts/docs/app-template/
+  - name: common
+    version: 5.3.0
+    repository: oci://ghcr.io/bjw-s-labs/helm

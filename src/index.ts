@@ -17,7 +17,12 @@ async function main() {
   await seedChatPairFromEnv(db, env, logger);
 
   const app = createHttpApp();
-  const bot = createBot({ token: env.BOT_TOKEN, logger, db });
+  const bot = createBot({
+    token: env.BOT_TOKEN,
+    logger,
+    db,
+    telegramEnvironment: env.TELEGRAM_ENVIRONMENT,
+  });
 
   serve({ fetch: app.fetch, port: env.PORT }, (info) => {
     logger.info({ port: info.port }, "http listening");

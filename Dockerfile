@@ -11,9 +11,12 @@ RUN nub ci --prod
 FROM ghcr.io/nubjs/nub:0.9.7-alpine AS runner
 WORKDIR /app
 ENV NODE_ENV=production
+ENV PORT=3000
 COPY --from=build --chown=node:node /app/node_modules ./node_modules
 COPY --from=build --chown=node:node /app/dist ./dist
+COPY --from=build --chown=node:node /app/drizzle ./drizzle
 COPY --from=build --chown=node:node /app/package.json ./package.json
 USER node
 EXPOSE 3000
-CMD ["nub", "run", "start"]
+# Migrations run at process boot via createDb(); long-poll + /health on PORT.
+CMD ["node", "dist/index.js"]

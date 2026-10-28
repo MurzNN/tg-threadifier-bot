@@ -1,0 +1,4 @@
+.DS_Store
+.git
+.gitignore
+# Note: avoid `!negation` patterns — Helm 4 treats them as ignoring Chart.yaml.

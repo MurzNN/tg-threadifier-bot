@@ -1,0 +1,15 @@
+# Overlay: use an existing Postgres instead of the in-chart StatefulSet.
+controllers:
+  postgres:
+    enabled: false
+
+service:
+  postgres:
+    enabled: false
+
+persistence:
+  postgres-data:
+    enabled: false
+
+# Still required — set at install time:
+# secrets.credentials.stringData.DATABASE_URL=postgresql://…

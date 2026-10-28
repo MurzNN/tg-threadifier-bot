@@ -12,6 +12,8 @@ export type BotDeps = {
   logger: Logger;
   db: AppDb;
   pairDrafts?: PairDraftStore;
+  /** grammY `client.environment` — `test` for Telegram Test DCs. */
+  telegramEnvironment?: "prod" | "test";
 };
 
 /** Create a GrammY bot with /start, pair commands, and ingest middleware. */
@@ -20,8 +22,11 @@ export function createBot({
   logger,
   db,
   pairDrafts = new PairDraftStore(),
+  telegramEnvironment = "prod",
 }: BotDeps): Bot {
-  const bot = new Bot(token);
+  const bot = new Bot(token, {
+    client: { environment: telegramEnvironment },
+  });
 
   bot.use(createIngestMiddleware(db, logger));
 

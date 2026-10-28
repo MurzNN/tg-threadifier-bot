@@ -19,7 +19,8 @@ describe("PGlite persistence smoke", () => {
     await handle?.close();
   });
 
-  it("seeds a pair from env and upserts a message", async () => {
+  // PGlite + migrate can exceed the default 5s under parallel Vitest load.
+  it("seeds a pair from env and upserts a message", { timeout: 15_000 }, async () => {
     handle = await createTestDb();
     const logger = createLogger({ LOG_LEVEL: "silent", NODE_ENV: "test" });
 
@@ -29,6 +30,7 @@ describe("PGlite persistence smoke", () => {
         BOT_TOKEN: "test:token",
         PORT: 3000,
         LOG_LEVEL: "silent",
+        TELEGRAM_ENVIRONMENT: "prod",
         NODE_ENV: "test",
         SOURCE_CHAT_ID: -42,
         TARGET_CHAT_ID: -43,

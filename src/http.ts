@@ -4,7 +4,7 @@ import { Hono } from "hono";
 export function createHttpApp() {
   const app = new Hono();
 
-  app.get("/health", (c) => c.json({ ok: true, service: "threadifier-bot" }));
+  app.get("/health", (c) => c.json({ ok: true, service: "tg-threadifier-bot" }));
 
   return app;
 }
