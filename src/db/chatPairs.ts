@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, or } from "drizzle-orm";
+import { and, asc, desc, eq, ne, or } from "drizzle-orm";
 
 import type { AppDb } from "./client.js";
 import { chatPairs } from "./schema.js";
@@ -36,11 +36,36 @@ function mapRow(row: typeof chatPairs.$inferSelect): ChatPair {
   };
 }
 
-/** Upsert a single enabled pair (v1: one active community pair is enough). */
+/**
+ * Soft-disable every other enabled pair that shares this target.
+ * v1 keeps at most one enabled pair per target so relocate lookup is unambiguous.
+ */
+export async function disableOtherEnabledPairsForTarget(
+  db: AppDb,
+  targetChatId: number,
+  keepPairId: number,
+): Promise<number> {
+  const result = await db
+    .update(chatPairs)
+    .set({ enabled: false })
+    .where(
+      and(
+        eq(chatPairs.enabled, true),
+        eq(chatPairs.targetChatId, targetChatId),
+        // Keep the row we just upserted / remapped.
+        ne(chatPairs.id, keepPairId),
+      ),
+    )
+    .returning();
+  return result.length;
+}
+
+/** Upsert a single enabled pair (v1: one active pair per target). */
 export async function upsertChatPair(
   db: AppDb,
   input: UpsertPairInput,
 ): Promise<ChatPair> {
+  const enabled = input.enabled ?? true;
   const existing = await db
     .select()
     .from(chatPairs)
@@ -52,6 +77,7 @@ export async function upsertChatPair(
     )
     .limit(1);
 
+  let pair: ChatPair;
   if (existing[0]) {
     await db
       .update(chatPairs)
@@ -60,7 +86,7 @@ export async function upsertChatPair(
         targetTitle: input.targetTitle ?? existing[0].targetTitle,
         sourceUsernameOrPath:
           input.sourceUsernameOrPath ?? existing[0].sourceUsernameOrPath,
-        enabled: input.enabled ?? true,
+        enabled,
       })
       .where(eq(chatPairs.id, existing[0].id));
     const refreshed = await db
@@ -68,21 +94,26 @@ export async function upsertChatPair(
       .from(chatPairs)
       .where(eq(chatPairs.id, existing[0].id))
       .limit(1);
-    return mapRow(refreshed[0]!);
+    pair = mapRow(refreshed[0]!);
+  } else {
+    const inserted = await db
+      .insert(chatPairs)
+      .values({
+        sourceChatId: input.sourceChatId,
+        targetChatId: input.targetChatId,
+        sourceTitle: input.sourceTitle ?? null,
+        targetTitle: input.targetTitle ?? null,
+        sourceUsernameOrPath: input.sourceUsernameOrPath ?? null,
+        enabled,
+      })
+      .returning();
+    pair = mapRow(inserted[0]!);
   }
 
-  const inserted = await db
-    .insert(chatPairs)
-    .values({
-      sourceChatId: input.sourceChatId,
-      targetChatId: input.targetChatId,
-      sourceTitle: input.sourceTitle ?? null,
-      targetTitle: input.targetTitle ?? null,
-      sourceUsernameOrPath: input.sourceUsernameOrPath ?? null,
-      enabled: input.enabled ?? true,
-    })
-    .returning();
-  return mapRow(inserted[0]!);
+  if (pair.enabled) {
+    await disableOtherEnabledPairsForTarget(db, pair.targetChatId, pair.id);
+  }
+  return pair;
 }
 
 export async function listEnabledPairs(db: AppDb): Promise<ChatPair[]> {
@@ -117,10 +148,11 @@ export async function listPairsForChat(
   return rows.map(mapRow);
 }
 
-export async function findEnabledPairByTarget(
+/** Enabled pairs for a target, newest id first (preferred when several remain). */
+export async function listEnabledPairsByTarget(
   db: AppDb,
   targetChatId: number,
-): Promise<ChatPair | undefined> {
+): Promise<ChatPair[]> {
   const rows = await db
     .select()
     .from(chatPairs)
@@ -130,8 +162,16 @@ export async function findEnabledPairByTarget(
         eq(chatPairs.targetChatId, targetChatId),
       ),
     )
-    .limit(1);
-  return rows[0] ? mapRow(rows[0]) : undefined;
+    .orderBy(desc(chatPairs.id));
+  return rows.map(mapRow);
+}
+
+export async function findEnabledPairByTarget(
+  db: AppDb,
+  targetChatId: number,
+): Promise<ChatPair | undefined> {
+  const rows = await listEnabledPairsByTarget(db, targetChatId);
+  return rows[0];
 }
 
 export async function findEnabledPairForChat(

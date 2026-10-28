@@ -2,7 +2,7 @@ import type { Api } from "grammy";
 import type { MessageEntity } from "grammy/types";
 
 import type { ChatPair } from "../../db/chatPairs.js";
-import { findEnabledPairByTarget } from "../../db/chatPairs.js";
+import { listEnabledPairsByTarget } from "../../db/chatPairs.js";
 import type { AppDb } from "../../db/client.js";
 import {
   findMessage,
@@ -67,6 +67,16 @@ type ResolvedItem = {
   message: StoredMessage;
   triggerMessageId: number;
   authorName: string;
+};
+
+type MatchAttemptFailure = {
+  triggerMessageId: number;
+  reason: string;
+  sourceChatId: number;
+  originDate: number | null;
+  fingerprint: string;
+  candidateCount: number;
+  originType: string | null;
 };
 
 function errorText(err: unknown): string {
@@ -147,7 +157,7 @@ async function resolveItem(
   item: PendingForward,
 ): Promise<
   | { ok: true; item: ResolvedItem }
-  | { ok: false; reason: string; triggerMessageId: number }
+  | { ok: false; failure: MatchAttemptFailure }
 > {
   const origin = item.origin;
   const exact =
@@ -173,8 +183,16 @@ async function resolveItem(
   if (!matched.ok) {
     return {
       ok: false,
-      reason: matched.reason,
-      triggerMessageId: item.triggerMessageId,
+      failure: {
+        triggerMessageId: item.triggerMessageId,
+        reason: matched.reason,
+        sourceChatId,
+        originDate: origin?.date ?? null,
+        fingerprint: item.fingerprint,
+        candidateCount:
+          origin?.type === "channel" ? (exact ? 1 : 0) : candidates.length,
+        originType: origin?.type ?? null,
+      },
     };
   }
   return {
@@ -185,6 +203,27 @@ async function resolveItem(
       authorName: authorLabel(origin?.authorName),
     },
   };
+}
+
+async function resolveBatchAgainstPair(
+  db: AppDb,
+  pair: ChatPair,
+  items: PendingForward[],
+): Promise<
+  | { ok: true; resolved: ResolvedItem[] }
+  | { ok: false; failures: MatchAttemptFailure[] }
+> {
+  const resolved: ResolvedItem[] = [];
+  const failures: MatchAttemptFailure[] = [];
+  for (const item of items) {
+    const result = await resolveItem(db, pair.sourceChatId, item);
+    if (result.ok) resolved.push(result.item);
+    else failures.push(result.failure);
+  }
+  if (failures.length > 0 || resolved.length !== items.length) {
+    return { ok: false, failures };
+  }
+  return { ok: true, resolved };
 }
 
 /**
@@ -201,31 +240,72 @@ export async function relocateBatch(
   if (!first) return;
   const { db, api, logger } = deps;
 
-  const pair = await findEnabledPairByTarget(db, first.targetChatId);
-  if (!pair) {
+  const pairs = await listEnabledPairsByTarget(db, first.targetChatId);
+  if (pairs.length === 0) {
     logger.warn(
       { targetChatId: first.targetChatId },
       "relocate skipped; no enabled pair for target",
     );
     return;
   }
-
-  const resolved: ResolvedItem[] = [];
-  const failures: { triggerMessageId: number; reason: string }[] = [];
-  for (const item of items) {
-    const result = await resolveItem(db, pair.sourceChatId, item);
-    if (result.ok) resolved.push(result.item);
-    else {
-      failures.push({
-        triggerMessageId: result.triggerMessageId,
-        reason: result.reason,
-      });
-    }
+  if (pairs.length > 1) {
+    logger.warn(
+      {
+        targetChatId: first.targetChatId,
+        pairIds: pairs.map((pair) => pair.id),
+        sourceChatIds: pairs.map((pair) => pair.sourceChatId),
+        moderatorUserId: first.moderatorUserId,
+      },
+      "multiple enabled pairs for target; trying each until a full match",
+    );
   }
 
-  if (failures.length > 0 || resolved.length !== items.length) {
+  let pair = pairs[0]!;
+  let resolved: ResolvedItem[] | null = null;
+  let failures: MatchAttemptFailure[] = [];
+  for (const candidate of pairs) {
+    const attempt = await resolveBatchAgainstPair(db, candidate, items);
+    if (attempt.ok) {
+      if (candidate !== pairs[0]) {
+        logger.warn(
+          {
+            targetChatId: first.targetChatId,
+            chosenPairId: candidate.id,
+            chosenSourceChatId: candidate.sourceChatId,
+            skippedPairIds: pairs
+              .filter((row) => row.id !== candidate.id)
+              .map((row) => row.id),
+            moderatorUserId: first.moderatorUserId,
+          },
+          "relocation matched a non-preferred pair; disable stale siblings",
+        );
+      }
+      pair = candidate;
+      resolved = attempt.resolved;
+      break;
+    }
+    failures = attempt.failures;
     logger.warn(
-      { failures, pairId: pair.id, moderatorUserId: first.moderatorUserId },
+      {
+        failures,
+        pairId: candidate.id,
+        sourceChatId: candidate.sourceChatId,
+        targetChatId: candidate.targetChatId,
+        moderatorUserId: first.moderatorUserId,
+      },
+      "relocation match failed against pair",
+    );
+  }
+
+  if (!resolved) {
+    logger.warn(
+      {
+        failures,
+        pairIds: pairs.map((row) => row.id),
+        sourceChatIds: pairs.map((row) => row.sourceChatId),
+        pairId: pair.id,
+        moderatorUserId: first.moderatorUserId,
+      },
       "relocation match failed",
     );
     await insertRelocationJob(db, {

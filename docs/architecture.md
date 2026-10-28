@@ -143,7 +143,7 @@ One process / one container runs both the Telegram bot backend and the Mini App 
 ### Bot app (GrammY)
 
 - **Ingest middleware:** normalize and upsert every relevant message into the store (source + target). At `debug`, each update and each ingest decision (stored, no message, chat outside an enabled pair) is logged. Startup logs `canReadAllGroupMessages`, the watched chat ids, and the database target, and warns when privacy mode hides ordinary group messages.
-- **Chat migration middleware:** when Telegram upgrades a basic group to a supergroup, remaps the old chat id to the new one across persisted pair/message/thread/job state (and `/pair` drafts) so ingest and relocate keep working.
+- **Chat migration middleware:** when Telegram upgrades a basic group to a supergroup, remaps the old chat id to the new one across persisted pair/message/thread/job state (and `/pair` drafts) so ingest and relocate keep working. Colliding remaps soft-disable the remapped pair instead of duplicating an existing `(source, target)`.
 - **Forward detector:** when messages appear in `targetChat`, decide if they are a moderator-triggered forward batch from the linked `sourceChat`.
 - **Relocate workflow:** implement Flow A (header → thread link → re-forward → deletes → source notice) in clear phases.
 - **Loose-message workflow:** implement Flow B (prompt + callbacks).
@@ -188,6 +188,9 @@ Handlers live in `src/bot/commands/pair.ts`. Persistence lives in `src/db/chatPa
 - `requireChatAdmin` (`src/bot/admin.ts`) treats a private chat as allowed and, in a group, requires Telegram status `creator` or `administrator`. `/pair` with no arguments and `/status` do not call it. `/pair source`, `/pair target`, and `/unpair` do.
 - Rows are not owned by the operator who created them. The table has no configuring-user column.
 - Upsert identity is `(source_chat_id, target_chat_id)`. One chat may appear in more than one row.
+- **At most one enabled pair per `target_chat_id`.** Enabling a pair (via `/pair`, env seed, or upsert) soft-disables every other enabled row that shares that target. Lookup prefers the newest pair id (`ORDER BY id DESC`).
+- Relocate still defends against legacy duplicate enabled targets: it tries each enabled pair for the target until a full batch match succeeds, and logs a warning when more than one enabled pair exists or when a non-preferred pair wins.
+- Group → supergroup remaps that would collide with an existing `(source, target)` row soft-disable the remapped row and keep the existing one.
 - `/unpair` sets `enabled=false` and leaves the row. A list of all pairs includes disabled rows and rows seeded from `SOURCE_CHAT_ID` / `TARGET_CHAT_ID`.
 - An in-progress `/pair source` then `/pair target` lives in the in-memory `PairDraftStore`, keyed by the operator's Telegram user id. The row is written when both chats are set.
 
@@ -212,13 +215,13 @@ Because the moderator’s forwards land as **new** messages in `targetChat`, the
 
 1. Detects `forward_origin` on a non-bot message in the linked `targetChat` (`user`, `hidden_user`, `chat`, or `channel`).
 2. Groups forwards from the same user in that chat into one batch. The quiet period is **2 seconds** (`BATCH_WINDOW_MS`); each new forward resets it, so a media group that arrives together stays one batch.
-3. Restricts candidates to the linked `sourceChat`.
+3. Restricts candidates to the linked `sourceChat` for each enabled pair of that target (newest pair first; warn and try siblings if several remain).
 4. Resolves each item:
    - **Channel origin** whose chat is the source: exact `message_id`. A channel origin from any other chat is a failure (not a fuzzy match).
    - **Otherwise:** one stored row with the same content fingerprint, the same `forward_origin.date`, and (when the sender is a known user) the same author.
 5. Sorts matches by stored `date`, then message id. The earliest is the header root.
 
-Zero matches or more than one candidate is a match failure: persist `relocation_jobs.phase = aborted`, tell the moderator in the target chat, and **do not delete**.
+Zero matches or more than one candidate is a match failure: persist `relocation_jobs.phase = aborted`, tell the moderator in the target chat, and **do not delete**. Match-failure logs include `sourceChatId`, origin date, fingerprint, origin type, and candidate count.
 
 ### Relocate phases (safety)
 

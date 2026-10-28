@@ -5,6 +5,7 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { createBot } from "../../src/bot.js";
 import { readChatMigration } from "../../src/bot/chatMigration.js";
 import {
+  listChatPairs,
   listEnabledPairs,
   PairDraftStore,
   upsertChatPair,
@@ -22,6 +23,7 @@ import {
   listRelocationJobs,
   listThreads,
 } from "../../src/db/relocation.js";
+import { chatPairs } from "../../src/db/schema.js";
 import { createLogger } from "../../src/logger.js";
 import { createTestDb } from "../helpers/db.js";
 
@@ -181,6 +183,40 @@ describe("remapChatId", () => {
       sourceChatId: OTHER,
       targetChatId: NEW_SUPERGROUP,
     });
+  });
+
+  it("disables a remapped pair that would collide with an existing row", async () => {
+    const kept = await upsertChatPair(handle.db, {
+      sourceChatId: NEW_SUPERGROUP,
+      targetChatId: OTHER,
+      enabled: true,
+    });
+    // Legacy row still pointing at the pre-upgrade source id (bypasses upsert).
+    const [stale] = await handle.db
+      .insert(chatPairs)
+      .values({
+        sourceChatId: OLD_GROUP,
+        targetChatId: OTHER,
+        enabled: true,
+      })
+      .returning();
+
+    const result = await remapChatId(handle.db, OLD_GROUP, NEW_SUPERGROUP);
+    expect(result.chatPairs).toBe(1);
+
+    const enabled = await listEnabledPairs(handle.db);
+    expect(enabled).toHaveLength(1);
+    expect(enabled[0]?.id).toBe(kept.id);
+    expect(enabled[0]).toMatchObject({
+      sourceChatId: NEW_SUPERGROUP,
+      targetChatId: OTHER,
+    });
+
+    const all = await listChatPairs(handle.db);
+    expect(all.find((pair) => pair.id === stale!.id)?.enabled).toBe(false);
+    expect(all.find((pair) => pair.id === stale!.id)?.sourceChatId).toBe(
+      OLD_GROUP,
+    );
   });
 });
 

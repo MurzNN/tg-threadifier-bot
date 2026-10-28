@@ -48,7 +48,9 @@ scripts/
 
 M0 sample: `tests/unit/start.test.ts` records `sendMessage` for `/start` against the English Lingui default.
 
-Command handlers: `tests/unit/pair.test.ts`. It uses in-memory PGlite from `createTestDb()` (`tests/helpers/db.ts`), `createBot` with `botInfo` set, an API transformer that records outgoing calls, and `bot.handleUpdate` for group and private updates. Assert `sendMessage` text with `expect.stringContaining` on stable English fragments. For a slash-command change, run that file before `nub run test`.
+Command handlers: `tests/unit/pair.test.ts`. It uses in-memory PGlite from `createTestDb()` (`tests/helpers/db.ts`), `createBot` with `botInfo` set, an API transformer that records outgoing calls, and `bot.handleUpdate` for group and private updates. Assert `sendMessage` text with `expect.stringContaining` on stable English fragments. Cover enabling a pair while another enabled row already owns the same target (siblings must soft-disable). For a slash-command change, run that file before `nub run test`.
+
+Flow A relocate (`tests/unit/relocate.test.ts`) also covers a legacy two-enabled-pairs-on-one-target case: preferred lookup misses, fallback pair matches, job completes. Chat migration (`tests/unit/chatMigration.test.ts`) covers remap collisions that would duplicate `(source, target)`.
 
 ---
 

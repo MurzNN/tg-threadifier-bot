@@ -3,7 +3,7 @@ import type { ChatMember, UserFromGetMe } from "grammy/types";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { createBot } from "../../src/bot.js";
-import { listEnabledPairs } from "../../src/db/chatPairs.js";
+import { listChatPairs, listEnabledPairs } from "../../src/db/chatPairs.js";
 import type { DbHandle } from "../../src/db/client.js";
 import { createLogger } from "../../src/logger.js";
 import { createTestDb } from "../helpers/db.js";
@@ -138,6 +138,25 @@ describe("pair commands", () => {
     expect(replies.at(-1)?.payload).toMatchObject({
       text: expect.stringContaining("Pair enabled"),
     });
+  });
+
+  it("enabling a pair disables other enabled pairs for the same target", async () => {
+    await bot.handleUpdate(groupCommand(1, -1001, "/pair source", "Main"));
+    await bot.handleUpdate(groupCommand(2, -1002, "/pair target", "Helper"));
+    await bot.handleUpdate(groupCommand(3, -1003, "/pair source", "Other"));
+    await bot.handleUpdate(groupCommand(4, -1002, "/pair target", "Helper"));
+
+    const enabled = await listEnabledPairs(handle.db);
+    expect(enabled).toHaveLength(1);
+    expect(enabled[0]).toMatchObject({
+      sourceChatId: -1003,
+      targetChatId: -1002,
+      enabled: true,
+    });
+
+    const all = await listChatPairs(handle.db);
+    expect(all).toHaveLength(2);
+    expect(all.find((pair) => pair.sourceChatId === -1001)?.enabled).toBe(false);
   });
 
   it("/status reports the pair for the current chat", async () => {

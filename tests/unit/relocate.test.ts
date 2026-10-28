@@ -8,6 +8,7 @@ import {
   listRelocationJobs,
   listThreads,
 } from "../../src/db/relocation.js";
+import { chatPairs } from "../../src/db/schema.js";
 import { createLogger } from "../../src/logger.js";
 import type { ApiCall } from "../helpers/botApiStub.js";
 import { testBotInfo } from "../helpers/botInfo.js";
@@ -25,6 +26,8 @@ import {
   type Original,
 } from "../helpers/flowA.js";
 import { createTestDb } from "../helpers/db.js";
+
+const STALE_SOURCE_CHAT_ID = -1005555555555;
 
 function installRecorder(
   bot: Bot,
@@ -169,6 +172,35 @@ describe("Flow A relocate (API transformer)", () => {
       payload: { reason: "match_failed" },
     });
     expect(await listThreads(handle.db)).toHaveLength(0);
+  });
+
+  it("falls back to another enabled pair when the preferred target pair misses", async () => {
+    // Newer id wins preferred lookup; leave a stale sibling enabled (legacy bad state).
+    await handle.db.insert(chatPairs).values({
+      sourceChatId: STALE_SOURCE_CHAT_ID,
+      targetChatId: TARGET_CHAT_ID,
+      sourceTitle: "Stale",
+      targetTitle: "Helper",
+      enabled: true,
+    });
+
+    await deliverCluster(bot, [ROOT]);
+
+    assertHappyRelocate(calls, {
+      title: ROOT.text!,
+      copyMessageIds: [],
+      sourceMessageIds: [ROOT.messageId],
+      triggerMessageIds: [201],
+    });
+    const jobs = await listRelocationJobs(handle.db);
+    expect(jobs).toHaveLength(1);
+    expect(jobs[0]).toMatchObject({
+      phase: "completed",
+      payload: {
+        sourceChatId: SOURCE_CHAT_ID,
+        items: [{ sourceMessageId: ROOT.messageId }],
+      },
+    });
   });
 
   it("aborts before source deletes when target cleanup fails", async () => {
