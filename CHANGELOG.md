@@ -1,6 +1,12 @@
 # Changelog
 
 
+## [0.4.0](https://github.com/MurzNN/tg-threadifier-bot/compare/v0.3.0...v0.4.0) (2026-10-28)
+
+### Features
+
+* **helm:** ship M1.5 packaging for manual testing ([9a09813](https://github.com/MurzNN/tg-threadifier-bot/commit/9a098132e813b1926e802b2f9fb42a5168154fc8))
+
 ## [0.3.0](https://github.com/MurzNN/tg-threadifier-bot/compare/v0.2.0...v0.3.0) (2026-10-28)
 
 ### Features
