@@ -17,6 +17,7 @@ import {
   forwardUpdate,
   seedPair,
 } from "../helpers/flowA.js";
+import { pressRelocate } from "../helpers/confirmRelocate.js";
 import { createTestDb } from "../helpers/db.js";
 
 /**
@@ -56,7 +57,11 @@ describe("Flow A relocate (Bot API HTTP stub)", () => {
   it("A1_relocate_happy", { timeout: 20_000 }, async () => {
     await setup();
     await deliverCluster(bot, [ROOT, REPLY_ONE, REPLY_TWO]);
+    await pressRelocate(bot, calls, "new");
     expect(methodsOf(calls)).toEqual([
+      "sendMessage",
+      "answerCallbackQuery",
+      "deleteMessage",
       "sendMessage",
       "editMessageText",
       "copyMessage",
@@ -85,7 +90,11 @@ describe("Flow A relocate (Bot API HTTP stub)", () => {
   it("A2_single_message", { timeout: 20_000 }, async () => {
     await setup();
     await deliverCluster(bot, [ROOT]);
+    await pressRelocate(bot, calls, "new");
     expect(methodsOf(calls)).toEqual([
+      "sendMessage",
+      "answerCallbackQuery",
+      "deleteMessage",
       "sendMessage",
       "editMessageText",
       "deleteMessages",

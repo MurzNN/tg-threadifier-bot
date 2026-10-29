@@ -60,7 +60,6 @@ export const threads = pgTable(
     targetChatId: bigint("target_chat_id", { mode: "number" }).notNull(),
     rootMessageId: integer("root_message_id").notNull(),
     threadTitle: text("thread_title").notNull(),
-    topicLabel: text("topic_label").notNull(),
     titleSource: text("title_source").notNull().default("truncated"),
     initiatorUserId: bigint("initiator_user_id", { mode: "number" }),
     createdAt: timestamp("created_at", { withTimezone: true, mode: "date" })

@@ -124,7 +124,6 @@ describe("remapChatId", () => {
       targetChatId: OLD_GROUP,
       rootMessageId: 800,
       threadTitle: "topic",
-      topicLabel: "topic",
       titleSource: "truncated",
       initiatorUserId: 9,
     });

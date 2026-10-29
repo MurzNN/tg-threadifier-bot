@@ -10,7 +10,7 @@ Copy shown below is the **English default** meaning reference. Defaults are **tr
 
 | Layer | Convention | Examples |
 |-------|------------|----------|
-| Docs, TS, Lingui placeholders | **camelCase** | `sourceChat`, `{topicLabel}`, `{userDisplayName}` |
+| Docs, TS, Lingui placeholders | **camelCase** | `sourceChat`, `{threadTitle}`, `{userDisplayName}` |
 | SQL tables / columns | **snake_case** (DB norm; mapped in Drizzle) | `chat_pairs.source_chat_id` |
 
 Placeholders use **single braces** (ICU / Lingui):
@@ -25,15 +25,16 @@ Telegram HTML (`<a href="...">`) is markup inside the message, not a placeholder
 
 ### Title resolution (shared)
 
-Before posting the thread header and source notice, the bot resolves `threadTitle` and `topicLabel` from the root offtopic message:
+Before posting the thread header and source notice, the bot resolves one title, `threadTitle`, from the root offtopic message. The header, the source notice, and the stored thread row all use it.
 
-| Mode | `{threadTitle}` (header) | `{topicLabel}` (source notice + stored label) |
-|------|--------------------------|-----------------------------------------------|
-| **No AI** (default) | Root message text, truncated to 120 characters | Same truncated text |
-| **AI enabled** (optional) | Short AI-generated thread title | Same AI topic (or a slightly longer AI summary if configured); on AI failure → fall back to no-AI row |
+| Mode | `{threadTitle}` |
+|------|-----------------|
+| **No AI** (default) | Root message text, truncated to 120 characters |
+| **Custom** | The title the moderator sends after choosing “Set custom thread title”. Stored and shown in full; the 120-character limit does not apply |
+| **AI enabled** (optional) | Short AI-generated thread title; on AI failure → fall back to the no-AI row |
 
 - AI is **opt-in** per deployment or per chat pair (config TBD). Core relocate must work with AI off.
-- Persist the resolved title on the thread row so Flow B button labels stay stable (`Thread: {topicLabel}` shortened to 12 characters → `{topicLabel12}`).
+- Persist `threadTitle` on the thread row. Recent-thread buttons use `Thread: {threadTitle12}`, where `{threadTitle12}` is `{threadTitle}` shortened to **12** characters. That shortening is only the button label.
 - Media-only roots (no text): use a fixed Lingui fallback (e.g. “Media message”) or AI vision later — v1 can use a static fallback when AI is off.
 
 ---
@@ -55,8 +56,13 @@ Before posting the thread header and source notice, the bot resolves `threadTitl
 
 1. **Moderator forwards** selected messages from `sourceChat` → `targetChat`.
 2. **Bot detects** that the new messages in `targetChat` are forwards originating from the linked `sourceChat`, by matching against the local store (timestamps, authors, content — see architecture).
-3. **Bot resolves** `{threadTitle}` / `{topicLabel}` (see Title resolution above).
-4. **Bot posts a thread header** in `targetChat` (this message becomes the thread root):
+3. **Bot asks for confirmation** in `targetChat`, after the batch has matched. The message states how many messages will be relocated, the automatic `{threadTitle}`, and a short chronological preview. Buttons:
+   - **Create new thread** — continue this flow with the automatic title.
+   - **Set custom thread title** — the moderator’s next plain text in `targetChat` (not a command and not a forward) becomes `{threadTitle}` and is not truncated. Then this flow continues.
+   - **Attach to a previous thread** — show the last 5 threads (`Thread: {threadTitle12}`). Choosing one copies **every** matched message into that reply thread. No new header and no new thread row. Source deletes and the redirect notice still run, using that thread’s `{threadTitle}` and link.
+   - **Delete these messages** — delete the forwarded messages grouped by this question and the question itself. Cancel thread creation. Leave the source messages in place and post no notice.
+   Only the moderator who forwarded the bundle can press the buttons. There is no timeout.
+4. **Bot posts a thread header** in `targetChat` (this message becomes the thread root), unless the moderator attached the bundle to an existing thread or deleted it:
 
    ```
    Thread: {threadTitle}
@@ -64,7 +70,7 @@ Before posting the thread header and source notice, the bot resolves `threadTitl
    <a href="{threadLink}">Thread link</a>.
    ```
 
-   - `{threadTitle}` — AI short title if enabled, otherwise root message text (truncated as needed).
+   - `{threadTitle}` — custom title if the moderator set one, otherwise an AI short title if enabled, otherwise root message text truncated to 120 characters.
    - `{linkToUser}` / `{userDisplayName}` — author of that root message.
    - `{linkToSourceChat}` / `{sourceChatName}` — pointer back to the origin chat (and ideally the original message while it still exists).
 
@@ -81,16 +87,16 @@ Before posting the thread header and source notice, the bot resolves `threadTitl
 
    Reference: [Telegram links](https://core.telegram.org/api/links).
 
-6. **Bot forwards** all other messages in the moderated set (excluding the root already represented in the header) **into that thread** in `targetChat`. The header message is the reply-thread root (`?thread=` is that message id). This is not a forum topic. Each copied message keeps its original author as a suffix on the text or caption: `— {authorName}`, linked to that user when the id is known.
+6. **Bot forwards** all other messages in the moderated set (excluding the root already represented in the header) **into that thread** in `targetChat`. When the moderator attached the bundle to an existing thread, every matched message is copied, including the root. The header message is the reply-thread root (`?thread=` is that message id). This is not a forum topic. Each copied message keeps its original author as a suffix on the text or caption: `— {authorName}`, linked to that user when the id is known.
 7. **Bot deletes** in `targetChat` the temporary forwarded copies that the moderator used as the trigger (they have been re-emitted by the bot).
 8. **Bot deletes** in `sourceChat` all messages that were part of the forwarded set.
 9. **Bot posts** in `sourceChat` a redirect notice:
 
    ```
-   The message "{topicLabel}" from <a href="{linkToUser}">{userDisplayName}</a> with responses forwarded to the chat <a href="{linkToTargetChatThread}">{targetChatName}</a>. Please continue the conversation there.
+   The message "{threadTitle}" from <a href="{linkToUser}">{userDisplayName}</a> with responses forwarded to the chat <a href="{linkToTargetChatThread}">{targetChatName}</a>. Please continue the conversation there.
    ```
 
-   - `{topicLabel}` — AI-generated topic if AI is enabled; otherwise truncated root message text.
+   - `{threadTitle}` — the same title as the header, or the existing thread’s title when attaching.
 
 ### Outcome
 
@@ -105,11 +111,18 @@ Before posting the thread header and source notice, the bot resolves `threadTitl
 | Only one message forwarded | Header uses resolved title; no extra forwards into the thread; still delete source + temps; post notice |
 | Bundle order ambiguous | Prefer chronological order from stored `date` / message ids |
 | Several forwards in a short burst | Forwards from the same user in `targetChat` are one batch after **2 seconds** of quiet. The earliest stored source message is the root |
+| More forwards from the same moderator while the question is open | Append them to that draft after the same quiet period, delete the question, and post it again for the current step (confirm, title, or thread list) |
+| More forwards make the whole draft unmatchable | Delete the question, tell the moderator the history was missing, and delete nothing else |
+| Callback from someone else | Answer that only the person who forwarded the messages can choose. Leave the question in place |
+| No previous threads | Answering “Attach to a previous thread” leaves the confirmation in place |
+| Moderator sets a custom title | Header and source notice use that full text. `title_source` is `custom` |
+| Delete these messages | Delete the grouped target forwards and the question. Record `relocation_jobs.phase = aborted` with reason `cancelled`. Source messages stay |
+| Confirmation after a restart | The in-memory draft is gone. A later button press answers that the confirmation expired. The forwards stay in the chat |
 | Match failure (forward not found in DB, or more than one candidate) | Do not delete anything; tell the moderator in the target chat that history was missing |
 | Partial permissions (can’t delete) | Abort destructive steps that have not run; surface an error to the moderator. The job row keeps the last committed phase |
 | Media / stickers / albums | Non-root messages are copied into the reply thread, including stickers and files. Photos and other captionable media get the same `— {authorName}` suffix as text. Stickers and other types with nowhere to put text are copied without that line. A media-only root is represented only by the “Media message” label and is not copied again. Album grouping may split into separate replies |
 | AI timeout / error | Fall back to no-AI title resolution; do not block relocate |
-| AI disabled | Truncate / use message text only (120 characters for `{threadTitle}` and `{topicLabel}`) |
+| AI disabled | Truncate / use message text only (120 characters for automatic `{threadTitle}`). A custom title is not truncated |
 
 ---
 
@@ -132,13 +145,13 @@ Before posting the thread header and source notice, the bot resolves `threadTitl
    [Recent thread 5 label]
    ```
 
-2. Thread button labels (from stored thread title / topic label):
+2. Thread button labels (from the stored `threadTitle`):
 
    ```
-   Thread: {topicLabel12}
+   Thread: {threadTitle12}
    ```
 
-   where `{topicLabel12}` is `{topicLabel}` shortened to **12** characters. “Recent” = last **5** threads known for this `targetChat` (from DB).
+   where `{threadTitle12}` is `{threadTitle}` shortened to **12** characters. “Recent” = last **5** threads known for this `targetChat` (from DB).
 
 3. **User picks an existing thread**
    - Bot forwards (or moves) the user’s message into the selected thread.
@@ -236,6 +249,6 @@ For `A1` / `A2`, each destructive step must be checkable:
 1. Header posted → assert link format (`?thread=`) and expected HTML/Lingui substrings (including resolved `{threadTitle}`).
 2. Thread replies present → assert count and order.
 3. Temp forwards gone from target.
-4. Source messages gone; notice present with correct deep link and `{topicLabel}`.
+4. Source messages gone; notice present with correct deep link and `{threadTitle}`.
 
 If any assert would fail mid-flow in production, prefer **stop before delete** over half-applied cleanup (phases in [architecture.md](architecture.md)).

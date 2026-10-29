@@ -16,6 +16,7 @@ import {
   updateRelocationJob,
   type RelocationPayload,
   type RelocationPhase,
+  type StoredThread,
 } from "../../db/relocation.js";
 import { withLocale, type Locale } from "../../i18n.js";
 import { buildMessageLink, buildThreadLink, buildUserLink } from "../../lib/links.js";
@@ -30,6 +31,7 @@ import {
 import { matchForward, type ForwardOriginInfo } from "./match.js";
 import {
   authorLabel,
+  renderDiscardFailed,
   renderMatchFailure,
   renderRelocateAborted,
   renderSourceNotice,
@@ -51,21 +53,28 @@ export type PendingForward = {
   origin: ForwardOriginInfo | null;
 };
 
-type RelocateApi = Pick<
+export type RelocateApi = Pick<
   Api,
   | "sendMessage"
   | "editMessageText"
   | "editMessageCaption"
   | "copyMessage"
+  | "deleteMessage"
   | "deleteMessages"
 >;
+
+export type RelocateDeps = {
+  db: AppDb;
+  api: RelocateApi;
+  logger: Logger;
+};
 
 const HTML_OPTIONS = {
   parse_mode: "HTML" as const,
   link_preview_options: { is_disabled: true },
 };
 
-type ResolvedItem = {
+export type ResolvedItem = {
   message: StoredMessage;
   triggerMessageId: number;
   /** Raw sender name. Translated fallbacks are applied in the destination locale. */
@@ -235,19 +244,36 @@ async function resolveBatchAgainstPair(
   return { ok: true, resolved };
 }
 
+export type ResolvedRelocation = {
+  pair: ChatPair;
+  items: PendingForward[];
+  resolved: ResolvedItem[];
+  /** Auto title from the earliest message, in the target chat's locale. */
+  threadTitle: string;
+};
+
+export type ExecuteRelocationOptions = {
+  promptMessageId?: number;
+  titleMessageId?: number;
+  /** Stored in full. Skips the 120-character auto title. */
+  customTitle?: string;
+  /** Copy every matched message into this thread. No new header or thread row. */
+  existingThread?: StoredThread;
+};
+
 /**
- * Flow A for one grouped batch. Match failures and API errors stop before
- * any delete that has not already succeeded. Copies land in the header's
- * reply thread (`copyMessage` + `reply_parameters`). Text and captions then
- * gain an author suffix. `forwardMessage` cannot target that thread.
+ * Match a forward batch to stored source messages. Does not post or delete.
+ * Logs the same pair warnings as the previous immediate relocate path.
  */
-export async function relocateBatch(
-  deps: { db: AppDb; api: RelocateApi; logger: Logger },
+export async function matchRelocation(
+  deps: RelocateDeps,
   items: PendingForward[],
-): Promise<void> {
+): Promise<
+  { ok: true; plan: ResolvedRelocation } | { ok: false; pair: ChatPair | null }
+> {
   const first = items[0];
-  if (!first) return;
-  const { db, api, logger } = deps;
+  if (!first) return { ok: false, pair: null };
+  const { db, logger } = deps;
 
   const pairs = await listEnabledPairsByTarget(db, first.targetChatId);
   if (pairs.length === 0) {
@@ -255,7 +281,7 @@ export async function relocateBatch(
       { targetChatId: first.targetChatId },
       "relocate skipped; no enabled pair for target",
     );
-    return;
+    return { ok: false, pair: null };
   }
   if (pairs.length > 1) {
     logger.warn(
@@ -317,25 +343,7 @@ export async function relocateBatch(
       },
       "relocation match failed",
     );
-    await insertRelocationJob(db, {
-      chatPairId: pair.id,
-      phase: "aborted",
-      payload: {
-        moderatorUserId: first.moderatorUserId,
-        sourceChatId: pair.sourceChatId,
-        targetChatId: pair.targetChatId,
-        triggerMessageIds: items.map((item) => item.triggerMessageId),
-        reason: "match_failed",
-      },
-    });
-    const targetLocale = await localeForChat(db, pair.targetChatId);
-    await notify(
-      api,
-      pair.targetChatId,
-      withLocale(targetLocale, () => renderMatchFailure()),
-      logger,
-    );
-    return;
+    return { ok: false, pair };
   }
 
   resolved.sort(
@@ -343,6 +351,64 @@ export async function relocateBatch(
       a.message.date - b.message.date ||
       a.message.messageId - b.message.messageId,
   );
+
+  const targetLocale = await localeForChat(db, pair.targetChatId);
+  const threadTitle = withLocale(targetLocale, () =>
+    resolveRootTitles(resolved[0]?.message.text ?? null, resolved[0]?.message.caption ?? null),
+  ).threadTitle;
+
+  return {
+    ok: true,
+    plan: { pair, items, resolved, threadTitle },
+  };
+}
+
+/** Persist a match failure and tell the moderator. Deletes nothing. */
+export async function failRelocation(
+  deps: RelocateDeps,
+  pair: ChatPair,
+  items: PendingForward[],
+): Promise<void> {
+  const first = items[0];
+  if (!first) return;
+  const { db, api, logger } = deps;
+  await insertRelocationJob(db, {
+    chatPairId: pair.id,
+    phase: "aborted",
+    payload: {
+      moderatorUserId: first.moderatorUserId,
+      sourceChatId: pair.sourceChatId,
+      targetChatId: pair.targetChatId,
+      triggerMessageIds: items.map((item) => item.triggerMessageId),
+      reason: "match_failed",
+    },
+  });
+  const targetLocale = await localeForChat(db, pair.targetChatId);
+  await notify(
+    api,
+    pair.targetChatId,
+    withLocale(targetLocale, () => renderMatchFailure()),
+    logger,
+  );
+}
+
+/**
+ * Run a matched relocate. API errors stop before any delete that has not
+ * already succeeded. Copies land in a reply thread (`copyMessage` +
+ * `reply_parameters`). Text and captions then gain an author suffix.
+ */
+export async function executeRelocation(
+  deps: RelocateDeps,
+  plan: ResolvedRelocation,
+  options: ExecuteRelocationOptions = {},
+): Promise<void> {
+  const first = plan.items[0];
+  if (!first || plan.resolved.length === 0) return;
+  const { db, api, logger } = deps;
+  const { pair, resolved } = plan;
+
+  await deleteQuiet(api, logger, pair.targetChatId, options.promptMessageId);
+  await deleteQuiet(api, logger, pair.targetChatId, options.titleMessageId);
 
   const payload: RelocationPayload = {
     moderatorUserId: first.moderatorUserId,
@@ -367,7 +433,7 @@ export async function relocateBatch(
 
   let phase: RelocationPhase = "pending";
   try {
-    await postThread(deps, pair, first, resolved, payload, job.id, (next) => {
+    await postThread(deps, plan, payload, job.id, options, (next) => {
       phase = next;
     });
   } catch (err) {
@@ -389,30 +455,89 @@ export async function relocateBatch(
   }
 }
 
+/** Delete the grouped target forwards and the question. Source messages stay. */
+export async function discardRelocation(
+  deps: RelocateDeps,
+  plan: ResolvedRelocation,
+  promptMessageId: number | null,
+): Promise<boolean> {
+  const first = plan.items[0];
+  if (!first) return false;
+  const { db, api, logger } = deps;
+  const ids = plan.resolved.map((item) => item.triggerMessageId);
+  if (promptMessageId != null) ids.push(promptMessageId);
+  try {
+    await deleteIds(api, plan.pair.targetChatId, ids);
+  } catch (err) {
+    logger.error({ err, targetChatId: plan.pair.targetChatId }, "discard delete failed");
+    const targetLocale = await localeForChat(db, plan.pair.targetChatId);
+    await notify(
+      api,
+      plan.pair.targetChatId,
+      withLocale(targetLocale, () => renderDiscardFailed()),
+      logger,
+    );
+    return false;
+  }
+  await insertRelocationJob(db, {
+    chatPairId: plan.pair.id,
+    phase: "aborted",
+    payload: {
+      moderatorUserId: first.moderatorUserId,
+      sourceChatId: plan.pair.sourceChatId,
+      targetChatId: plan.pair.targetChatId,
+      triggerMessageIds: plan.resolved.map((item) => item.triggerMessageId),
+      reason: "cancelled",
+    },
+  });
+  return true;
+}
+
+async function deleteQuiet(
+  api: RelocateApi,
+  logger: Logger,
+  chatId: number,
+  messageId: number | undefined,
+): Promise<void> {
+  if (messageId == null) return;
+  try {
+    await api.deleteMessage(chatId, messageId);
+  } catch (err) {
+    logger.error({ err, chatId, messageId }, "failed to delete relocate prompt");
+  }
+}
+
 async function postThread(
-  deps: { db: AppDb; api: RelocateApi; logger: Logger },
-  pair: ChatPair,
-  first: PendingForward,
-  resolved: ResolvedItem[],
+  deps: RelocateDeps,
+  plan: ResolvedRelocation,
   payload: RelocationPayload,
   jobId: number,
+  options: ExecuteRelocationOptions,
   setPhase: (phase: RelocationPhase) => void,
 ): Promise<void> {
   const { db, api, logger } = deps;
+  const { pair, resolved } = plan;
+  const first = plan.items[0];
   const root = resolved[0];
-  if (!root) throw new Error("relocation batch has no root");
+  if (!first || !root) throw new Error("relocation batch has no root");
 
   const targetLocale = await localeForChat(db, pair.targetChatId);
   const sourceLocale = await localeForChat(db, pair.sourceChatId);
-  const titles = withLocale(targetLocale, () =>
-    resolveRootTitles(root.message.text, root.message.caption),
-  );
-  const noticeTitles =
-    sourceLocale === targetLocale
-      ? titles
-      : withLocale(sourceLocale, () =>
+  const customTitle = options.customTitle?.trim();
+  const titles =
+    customTitle != null && customTitle.length > 0
+      ? { threadTitle: customTitle, titleSource: "custom" as const }
+      : withLocale(targetLocale, () =>
           resolveRootTitles(root.message.text, root.message.caption),
         );
+  const noticeTitle =
+    customTitle != null && customTitle.length > 0
+      ? customTitle
+      : sourceLocale === targetLocale
+        ? titles.threadTitle
+        : withLocale(sourceLocale, () =>
+            resolveRootTitles(root.message.text, root.message.caption).threadTitle,
+          );
   const userId = root.message.fromUserId;
   const linkToUser = userId != null ? buildUserLink(userId) : "https://t.me";
   const sourceName = withLocale(targetLocale, () => sourceChatLabel(pair.sourceTitle));
@@ -426,52 +551,67 @@ async function postThread(
     messageId: root.message.messageId,
     username: pair.sourceUsernameOrPath,
   });
-  const headerVars = {
-    threadTitle: titles.threadTitle,
-    linkToUser,
-    userDisplayName: headerAuthor,
-    linkToSourceChat,
-    sourceChatName: sourceName,
-    threadLink: "https://t.me",
-  };
 
-  const sent = await api.sendMessage(
-    pair.targetChatId,
-    withLocale(targetLocale, () => renderThreadHeader(headerVars)),
-    HTML_OPTIONS,
-  );
-  const headerMessageId = sent.message_id;
-  const threadLink = buildThreadLink({
-    chatId: pair.targetChatId,
-    messageId: headerMessageId,
-    username: first.targetUsername,
-  });
-  await api.editMessageText(
-    pair.targetChatId,
-    headerMessageId,
-    withLocale(targetLocale, () => renderThreadHeader({ ...headerVars, threadLink })),
-    HTML_OPTIONS,
-  );
+  const existing = options.existingThread;
+  let headerMessageId: number;
+  let threadLink: string;
+  let noticeThreadTitle: string;
 
-  await insertThread(db, {
-    targetChatId: pair.targetChatId,
-    rootMessageId: headerMessageId,
-    threadTitle: titles.threadTitle,
-    topicLabel: titles.topicLabel,
-    titleSource: titles.titleSource,
-    initiatorUserId: userId,
-  });
+  if (existing) {
+    headerMessageId = existing.rootMessageId;
+    threadLink = buildThreadLink({
+      chatId: pair.targetChatId,
+      messageId: headerMessageId,
+      username: first.targetUsername,
+    });
+    noticeThreadTitle = existing.threadTitle;
+    payload.headerMessageId = headerMessageId;
+    payload.threadLink = threadLink;
+  } else {
+    const headerVars = {
+      threadTitle: titles.threadTitle,
+      linkToUser,
+      userDisplayName: headerAuthor,
+      linkToSourceChat,
+      sourceChatName: sourceName,
+      threadLink: "https://t.me",
+    };
+    const sent = await api.sendMessage(
+      pair.targetChatId,
+      withLocale(targetLocale, () => renderThreadHeader(headerVars)),
+      HTML_OPTIONS,
+    );
+    headerMessageId = sent.message_id;
+    threadLink = buildThreadLink({
+      chatId: pair.targetChatId,
+      messageId: headerMessageId,
+      username: first.targetUsername,
+    });
+    await api.editMessageText(
+      pair.targetChatId,
+      headerMessageId,
+      withLocale(targetLocale, () => renderThreadHeader({ ...headerVars, threadLink })),
+      HTML_OPTIONS,
+    );
+    await insertThread(db, {
+      targetChatId: pair.targetChatId,
+      rootMessageId: headerMessageId,
+      threadTitle: titles.threadTitle,
+      titleSource: titles.titleSource,
+      initiatorUserId: userId,
+    });
+    payload.headerMessageId = headerMessageId;
+    payload.threadLink = threadLink;
+    noticeThreadTitle = noticeTitle;
+    setPhase("header_created");
+    await updateRelocationJob(db, jobId, "header_created", payload);
+    logger.info({ jobId, headerMessageId }, "relocation header created");
+  }
 
-  payload.headerMessageId = headerMessageId;
-  payload.threadLink = threadLink;
-  setPhase("header_created");
-  await updateRelocationJob(db, jobId, "header_created", payload);
-  logger.info({ jobId, headerMessageId }, "relocation header created");
-
-  // Root text is represented by the header. Other messages are copied into
-  // the reply thread in stored chronological order, with the original author
-  // appended when the message has text or a caption.
-  for (const item of resolved.slice(1)) {
+  // A new thread's root is the header. Attaching copies every message, including
+  // the root, into the existing reply thread.
+  const copies = existing ? resolved : resolved.slice(1);
+  for (const item of copies) {
     await emitReply(api, pair, item, headerMessageId, targetLocale);
   }
   setPhase("populated");
@@ -497,7 +637,7 @@ async function postThread(
     pair.sourceChatId,
     withLocale(sourceLocale, () =>
       renderSourceNotice({
-        topicLabel: noticeTitles.topicLabel,
+        threadTitle: noticeThreadTitle,
         linkToUser,
         userDisplayName: noticeAuthor,
         linkToTargetChatThread: threadLink,

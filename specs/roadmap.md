@@ -57,7 +57,7 @@ Moved earlier so Flow A/B work can be exercised on a real cluster / Test DC with
 - [x] Delete originals in source
 - [x] Post source redirect notice
 - [x] Phase/job state machine with safe abort on match failure
-- [x] Title resolution without AI (truncate message text → `{threadTitle}` / `{topicLabel}`)
+- [x] Title resolution without AI (truncate message text → `{threadTitle}`)
 - [x] Integration scenarios: `A1` / `A2` / `A3` (emulator depth)
 - [ ] Manual Test DC walkthrough for `A1` green (steps in [testing.md](testing.md#manual-a1-until-m5-automation); not run in CI)
 
@@ -114,7 +114,7 @@ Moved earlier so Flow A/B work can be exercised on a real cluster / Test DC with
 - [ ] Optional AI thread titles (pluggable LLM; scenario `A4`; fallback already in M2)
 - [ ] Multiple target chats / topic-specific helpers per source
 - [ ] Multi-tenant hosting (many unrelated communities on one deployment)
-- [ ] Moderator “preview / confirm” before deletes
+- [x] Moderator preview / confirm before deletes (helper-chat confirmation: create, custom title, attach to a recent thread, or delete the grouped forwards)
 - [x] Lingui catalogs for `es`, `fr`, and `ru` (loaded with `en`; default locale stays `en`)
 - [x] Per-user command language: `/language` in the command menu, and `/start` stores the Telegram account language when it is shipped (`en` otherwise).
 - [x] Per-chat language: `/language` stores `chat_settings.locale` for the current chat. Command replies use that chat, then the caller's `user_settings.locale`, then the account language. Relocate copy uses the destination chat's locale, otherwise `en`.

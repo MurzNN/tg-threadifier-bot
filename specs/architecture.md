@@ -21,7 +21,7 @@ Do **not** rely on userbot / MTProto user sessions for the **product runtime**. 
 
 | Layer | Style | Examples |
 |-------|-------|----------|
-| Docs, TypeScript, Lingui placeholders | **camelCase** | `sourceChat`, `threadTitle`, `{topicLabel}`, `{linkToUser}` |
+| Docs, TypeScript, Lingui placeholders | **camelCase** | `sourceChat`, `threadTitle`, `{threadTitle}`, `{linkToUser}` |
 | SQL tables / columns | **snake_case** | `chat_pairs`, `source_chat_id`, `thread_title` |
 
 Drizzle schema properties use camelCase in TypeScript and map to snake_case columns. Do not mix styles in the same layer (e.g. avoid `{link_to_sourceChat}`).
@@ -102,7 +102,7 @@ Store overrides in the DB (e.g. `message_template_overrides`: `chat_pair_id`, `t
 
 - Prefer Lingui macros (`t`, `msg`, `Trans` in the Mini App) for defaults and UI so catalogs stay extractable. Put each reply sentence in one `t` template, including state words such as "enabled", so translators do not receive concatenated fragments.
 - Keep Telegram HTML (`<a href="...">`, etc.) inside messages; translators and operators must preserve placeholders and tags. Escape user-derived values before interpolation.
-- Dynamic parts include `threadTitle`, `topicLabel`, `userDisplayName`, `threadLink`, chat titles.
+- Dynamic parts include `threadTitle`, `userDisplayName`, `threadLink`, chat titles.
 - Message templates in `workflows.md` are the **English meaning** reference for defaults; Lingui catalogs are the shipped defaults; DB overrides are the per-community runtime customization.
 - Command replies (`/start`, `/language`, `/pair`, `/status`, `/unpair`) use this chat's locale, then the calling user's locale, then the account language, then `en`. `/language` stores the choice on `chat_settings` (one row per chat; further settings are additional columns) and is not admin-gated. `/start` stores Telegram `language_code` on `user_settings` when it is `en`, `es`, `fr`, or `ru` (region tags use the base language, so `es-MX` is `es`); any other code stores `en`. That user row is the fallback for chats with no locale of their own, and `/start` does not replace a chat's `/language` choice. A chat that already has a locale keeps it for the `/start` reply.
 - Relocate messages use the locale of the chat they are posted in, then `en`. The thread header, match and abort notices, and author suffixes use the target chat. The source notice uses the source chat. A user's private fallback does not apply.
@@ -146,7 +146,8 @@ One process / one container runs both the Telegram bot backend and the Mini App 
 - **Ingest middleware:** normalize and upsert every relevant message into the store (source + target). At `debug`, each update and each ingest decision (stored, no message, chat outside an enabled pair) is logged. Startup logs `canReadAllGroupMessages`, the watched chat ids, and the database target, and warns when privacy mode hides ordinary group messages.
 - **Chat migration middleware:** when Telegram upgrades a basic group to a supergroup, remaps the old chat id to the new one across persisted pair/message/thread/job state (and `/pair` drafts) so ingest and relocate keep working. Colliding remaps soft-disable the remapped pair instead of duplicating an existing `(source, target)`.
 - **Forward detector:** when messages appear in `targetChat`, decide if they are a moderator-triggered forward batch from the linked `sourceChat`.
-- **Relocate workflow:** implement Flow A (header → thread link → re-forward → deletes → source notice) in clear phases.
+- **Relocate confirmation:** a matched batch stays in an in-memory draft (one per target chat and moderator) until that moderator creates a thread, sets a custom title, attaches the bundle to a recent thread, or deletes the grouped forwards. Later forwards from the same moderator join the draft after the quiet window, and the question is posted again. Group → supergroup migration rewrites the draft’s chat id. A restart drops the draft.
+- **Relocate workflow:** implement Flow A (header → thread link → re-forward → deletes → source notice) in clear phases. Attaching to an existing thread skips the header and copies every matched message into that reply thread.
 - **Loose-message workflow:** implement Flow B (prompt + callbacks).
 - **Admin / config handlers:** pair chats; health; maybe dry-run flags for Test DC. See [Operator commands](#operator-commands). Command replies use the caller's language (`/language`, and the account language on `/start`).
 - **Command menu:** on startup, `setMyCommands` publishes `start`, `language`, `pair`, `status`, and `unpair` for private chats and all group chats. The menu with no `language_code` is English. `es`, `fr`, and `ru` each get a menu in that language.
@@ -204,9 +205,8 @@ Handlers live in `src/bot/commands/pair.ts`. Persistence lives in `src/db/chatPa
 | `id` | Internal |
 | `target_chat_id` | |
 | `root_message_id` | Header message id (= thread id for links); TS: `rootMessageId` |
-| `thread_title` | Resolved header title; TS / Lingui: `threadTitle` / `{threadTitle}` |
-| `topic_label` | Notice + Flow B label; TS / Lingui: `topicLabel` / `{topicLabel}` (12-char button: `topicLabel12`) |
-| `title_source` | `truncated` \| `ai`; TS: `titleSource` |
+| `thread_title` | The only title. Header, source notice, and stored label; TS / Lingui: `threadTitle` / `{threadTitle}`. Recent-thread buttons shorten it to 12 characters (`threadTitle12`, `THREAD_TITLE_BUTTON_MAX`). A custom title is stored in full |
+| `title_source` | `truncated` \| `custom` \| `ai`; TS: `titleSource`. `custom` is the moderator’s untruncated title |
 | `initiator_user_id` | TS: `initiatorUserId` |
 | `created_at` | For “last 5” ordering |
 
@@ -243,14 +243,17 @@ Because the moderator’s forwards land as **new** messages in `targetChat`, the
    - **Channel origin** whose chat is the source: exact `message_id`. A channel origin from any other chat is a failure (not a fuzzy match).
    - **Otherwise:** one stored row with the same content fingerprint, the same `forward_origin.date`, and (when the sender is a known user) the same author.
 5. Sorts matches by stored `date`, then message id. The earliest is the header root.
+6. Posts a confirmation in the target chat. The relocate job stays unstarted until the forwarding moderator chooses. **Create new thread** runs the phases below. **Set custom thread title** waits for that moderator’s next plain text and uses it as `threadTitle` with `title_source = custom` (no 120-character truncation). **Attach to a previous thread** lists the last 5 threads and copies every matched message into the chosen reply thread, then runs the cleanup and notice phases without `header_created`. **Delete these messages** deletes those target forwards and the question, records `phase = aborted` with reason `cancelled`, and leaves the source messages. Only that moderator’s callbacks are accepted.
 
-Zero matches or more than one candidate is a match failure: persist `relocation_jobs.phase = aborted`, tell the moderator in the target chat, and **do not delete**. Match-failure logs include `sourceChatId`, origin date, fingerprint, origin type, and candidate count.
+A later batch from the same moderator is appended and the whole set is matched again. On success the question is deleted and posted again. On failure the question is deleted, the draft is cleared, and the match-failure notice is sent. Nothing else is deleted.
+
+Zero matches or more than one candidate is a match failure: persist `relocation_jobs.phase = aborted`, tell the moderator in the target chat, and **do not delete**. Match-failure logs include `sourceChatId`, origin date, fingerprint, origin type, and candidate count. Open drafts are in memory and do not survive a process restart.
 
 ### Relocate phases (safety)
 
 Suggested commit points so failures don’t destroy unrecovered content:
 
-1. **Plan** — resolve batch; persist a `relocation_job` row (`pending`).
+1. **Plan** — resolve batch and, after the moderator confirms, persist a `relocation_job` row (`pending`).
 2. **Create header** — post header; save `root_message_id`; mark `header_created`.
 3. **Populate thread** — copy remaining messages into the reply thread; mark `populated`.
 4. **Cleanup target temps** — delete moderator’s trigger forwards; mark `target_cleaned`.
@@ -263,7 +266,7 @@ If a Bot API call fails after the plan, the job is marked `aborted` and `payload
 
 ### Optional AI thread titles
 
-- **Default path:** no AI — `{threadTitle}` / `{topicLabel}` from root message text with truncation.
+- **Default path:** no AI — `{threadTitle}` from root message text with truncation. A moderator custom title replaces it and is not truncated.
 - **Opt-in path:** call a pluggable LLM to produce a short topic; on timeout/error, fall back to truncation. Relocate must not fail because AI failed.
 - Config: env and/or per-pair flag (`aiTitlesEnabled`); secrets for API keys via Helm — never in git.
 - Tests: mock the LLM port in unit/integration; scenario `A4_ai_title_optional` covers success + fallback ([workflows.md](workflows.md) Flow D).
@@ -331,4 +334,4 @@ Record decisions here when closed:
 5. ~~Helm chart layout~~ → single chart under `charts/tg-threadifier-bot` depending on [bjw-s common](https://bjw-s-labs.github.io/helm-charts/docs/app-template/) (app-template library); optional in-chart Postgres StatefulSet; ingress host left to the target cluster
 6. ~~Which local Bot API emulator~~ → in-repo HTTP stub (`tests/helpers/botApiStub.ts`) that speaks the Bot API JSON envelope. `telegram-test-api` targets polling clients and does not cover `editMessageText`, `copyMessage` with `reply_parameters`, or `deleteMessages`. Test DC remains the acceptance gate.
 7. LLM provider / model for optional AI titles (and max token / latency budgets)
-8. ~~Header max length~~ → `{threadTitle}` and `{topicLabel}` share `THREAD_TITLE_MAX` (120). Flow B buttons still shorten `{topicLabel}` to 12 (`TOPIC_LABEL_BUTTON_MAX`).
+8. ~~Header max length~~ → automatic `{threadTitle}` uses `THREAD_TITLE_MAX` (120). A custom title is stored in full. Recent-thread buttons shorten `{threadTitle}` to 12 (`THREAD_TITLE_BUTTON_MAX`).

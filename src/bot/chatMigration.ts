@@ -1,6 +1,7 @@
 import type { Context, MiddlewareFn } from "grammy";
 
 import type { PairDraftStore } from "../db/chatPairs.js";
+import type { RelocationDraftStore } from "./relocate/drafts.js";
 import { remapChatId } from "../db/chatMigration.js";
 import type { AppDb } from "../db/client.js";
 import type { Logger } from "../logger.js";
@@ -28,6 +29,7 @@ export function createChatMigrationMiddleware(
   db: AppDb,
   logger: Logger,
   pairDrafts?: PairDraftStore,
+  relocationDrafts?: RelocationDraftStore,
 ): MiddlewareFn<Context> {
   return async (ctx, next) => {
     const migration = readChatMigration(ctx.message, ctx.chat?.id);
@@ -44,12 +46,15 @@ export function createChatMigrationMiddleware(
       );
       const drafts =
         pairDrafts?.remapChatId(migration.oldChatId, migration.newChatId) ?? 0;
+      const relocateDrafts =
+        relocationDrafts?.remapChatId(migration.oldChatId, migration.newChatId) ?? 0;
       logger.info(
         {
           oldChatId: migration.oldChatId,
           newChatId: migration.newChatId,
           ...result,
           pairDrafts: drafts,
+          relocationDrafts: relocateDrafts,
         },
         "chat migrated group → supergroup",
       );

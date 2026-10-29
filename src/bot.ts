@@ -7,6 +7,7 @@ import { registerLanguageCommand } from "./bot/commands/language.js";
 import { registerPairCommands } from "./bot/commands/pair.js";
 import { createUpdateLogMiddleware } from "./bot/diagnostics.js";
 import { createIngestMiddleware } from "./bot/ingest.js";
+import { RelocationDraftStore } from "./bot/relocate/drafts.js";
 import {
   flushRelocate,
   registerRelocate,
@@ -43,6 +44,7 @@ export function createBot({
   apiRoot,
   batchWindowMs,
 }: BotDeps): Bot {
+  const relocationDrafts = new RelocationDraftStore();
   const bot = new Bot(token, {
     client: {
       environment: telegramEnvironment,
@@ -51,9 +53,9 @@ export function createBot({
   });
 
   bot.use(createUpdateLogMiddleware(logger));
-  bot.use(createChatMigrationMiddleware(db, logger, pairDrafts));
+  bot.use(createChatMigrationMiddleware(db, logger, pairDrafts, relocationDrafts));
   bot.use(createIngestMiddleware(db, logger));
-  bot.use(registerRelocate(bot, db, logger, batchWindowMs));
+  bot.use(registerRelocate(bot, db, logger, relocationDrafts, batchWindowMs));
   bot.use(createCommandLocaleMiddleware(db));
 
   bot.command("start", async (ctx: Context) => {

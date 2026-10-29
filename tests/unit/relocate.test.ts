@@ -2,8 +2,11 @@ import type { ApiCallFn, Bot } from "grammy";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { createBot, flushRelocate, stopRelocate } from "../../src/bot.js";
+import { RelocationDraftStore } from "../../src/bot/relocate/drafts.js";
 import {
+  renderConfirmPrompt,
   renderMatchFailure,
+  renderPreviewLine,
   renderRelocateAborted,
   resolveRootTitles,
 } from "../../src/bot/relocate/templates.js";
@@ -32,6 +35,7 @@ import {
   sourceUpdate,
   type Original,
 } from "../helpers/flowA.js";
+import { pressRelocate, relocateCallbacks } from "../helpers/confirmRelocate.js";
 import { createTestDb } from "../helpers/db.js";
 
 const STALE_SOURCE_CHAT_ID = -1005555555555;
@@ -108,8 +112,12 @@ describe("Flow A relocate (API transformer)", () => {
 
   it("A1_relocate_happy posts a thread, copies replies, then deletes", async () => {
     await deliverCluster(bot, [ROOT, REPLY_ONE, REPLY_TWO]);
+    await pressRelocate(bot, calls, "new");
 
     expect(methodsOf(calls)).toEqual([
+      "sendMessage",
+      "answerCallbackQuery",
+      "deleteMessage",
       "sendMessage",
       "editMessageText",
       "copyMessage",
@@ -139,7 +147,6 @@ describe("Flow A relocate (API transformer)", () => {
       targetChatId: TARGET_CHAT_ID,
       rootMessageId: headerId,
       threadTitle: ROOT.text,
-      topicLabel: ROOT.text,
       titleSource: "truncated",
       initiatorUserId: ROOT.fromUserId,
     });
@@ -147,7 +154,11 @@ describe("Flow A relocate (API transformer)", () => {
 
   it("A2_single_message cleans up without copying replies", async () => {
     await deliverCluster(bot, [ROOT]);
+    await pressRelocate(bot, calls, "new");
     expect(methodsOf(calls)).toEqual([
+      "sendMessage",
+      "answerCallbackQuery",
+      "deleteMessage",
       "sendMessage",
       "editMessageText",
       "deleteMessages",
@@ -193,6 +204,7 @@ describe("Flow A relocate (API transformer)", () => {
     });
 
     await deliverCluster(bot, [ROOT]);
+    await pressRelocate(bot, calls, "new");
 
     assertHappyRelocate(calls, {
       title: ROOT.text!,
@@ -215,6 +227,7 @@ describe("Flow A relocate (API transformer)", () => {
     stopRelocate(bot);
     calls = installRecorder(bot, { failDelete: true });
     await deliverCluster(bot, [ROOT, REPLY_ONE]);
+    await pressRelocate(bot, calls, "new");
 
     expect(calls.filter((call) => call.method === "deleteMessages")).toEqual([
       expect.objectContaining({
@@ -235,6 +248,7 @@ describe("Flow A relocate (API transformer)", () => {
       text: `Hello <b> & "x"`,
     };
     await deliverCluster(bot, [nasty]);
+    await pressRelocate(bot, calls, "new");
     const headerId = assertHappyRelocate(calls, {
       title: `Hello <b> & "x"`,
       copyMessageIds: [],
@@ -245,7 +259,6 @@ describe("Flow A relocate (API transformer)", () => {
     expect(threads[0]).toMatchObject({
       rootMessageId: headerId,
       threadTitle: `Hello <b> & "x"`,
-      topicLabel: `Hello <b> & "x"`,
     });
   });
 
@@ -253,6 +266,7 @@ describe("Flow A relocate (API transformer)", () => {
     await setChatLocale(handle.db, TARGET_CHAT_ID, "ru");
     await setChatLocale(handle.db, SOURCE_CHAT_ID, "es");
     await deliverCluster(bot, [ROOT]);
+    await pressRelocate(bot, calls, "new");
 
     assertHappyRelocate(calls, {
       title: ROOT.text!,
@@ -266,6 +280,7 @@ describe("Flow A relocate (API transformer)", () => {
     const media: Original = { ...ROOT, text: null };
     const title = resolveRootTitles(null, null).threadTitle;
     await deliverCluster(bot, [media]);
+    await pressRelocate(bot, calls, "new");
     assertHappyRelocate(calls, {
       title,
       copyMessageIds: [],
@@ -278,6 +293,7 @@ describe("Flow A relocate (API transformer)", () => {
     const long = "a".repeat(200);
     const title = truncateText(long, THREAD_TITLE_MAX);
     await deliverCluster(bot, [{ ...ROOT, text: long }]);
+    await pressRelocate(bot, calls, "new");
     assertHappyRelocate(calls, {
       title,
       copyMessageIds: [],
@@ -297,6 +313,9 @@ describe("Flow A relocate (API transformer)", () => {
     await bot.handleUpdate(forwardUpdate(3, 201, ROOT, 7));
     await bot.handleUpdate(forwardUpdate(4, 301, REPLY_ONE, 8));
     await flushRelocate(bot);
+    const confirms = relocateCallbacks(calls, "new");
+    await pressRelocate(bot, calls, "new", { data: confirms[0], moderatorId: 7 });
+    await pressRelocate(bot, calls, "new", { data: confirms[1], moderatorId: 8 });
 
     const jobs = await listRelocationJobs(handle.db);
     expect(jobs.map((job) => job.phase)).toEqual(["completed", "completed"]);
@@ -321,5 +340,200 @@ describe("Flow A relocate (API transformer)", () => {
     expect(calls).toHaveLength(0);
     expect(await listRelocationJobs(handle.db)).toHaveLength(0);
     expect(await findMessage(handle.db, SOURCE_CHAT_ID, ROOT.messageId)).toBeTruthy();
+  });
+
+  it("asks for confirmation and does not post a header until the button", async () => {
+    await deliverCluster(bot, [ROOT, REPLY_ONE]);
+
+    expect(calls.some((call) => call.method === "copyMessage")).toBe(false);
+    expect(await listThreads(handle.db)).toHaveLength(0);
+    expect(calls[0]?.payload.text).toBe(
+      renderConfirmPrompt({
+        count: 2,
+        threadTitle: ROOT.text!,
+        lines: [
+          renderPreviewLine("Ada Lovelace", ROOT.text!),
+          renderPreviewLine("Grace", REPLY_ONE.text!),
+        ],
+        hiddenCount: 0,
+      }),
+    );
+    expect(relocateCallbacks(calls, "new")).toHaveLength(1);
+    expect(relocateCallbacks(calls, "title")).toHaveLength(1);
+    expect(relocateCallbacks(calls, "attach")).toHaveLength(1);
+    expect(relocateCallbacks(calls, "drop")).toHaveLength(1);
+  });
+
+  it("counts preview lines that do not fit", () => {
+    const text = renderConfirmPrompt({
+      count: 10,
+      threadTitle: "Topic",
+      lines: ["Ada: hi"],
+      hiddenCount: 2,
+    });
+    expect(text).toContain("10");
+    expect(text).toContain("Topic");
+    expect(text).toContain("Ada: hi");
+    expect(text).toContain("2");
+  });
+
+  it("folds a later burst into the open draft and posts the question again", async () => {
+    await deliverCluster(bot, [ROOT]);
+    await bot.handleUpdate(sourceUpdate(50, REPLY_ONE));
+    await bot.handleUpdate(forwardUpdate(51, 301, REPLY_ONE, 7));
+    await flushRelocate(bot);
+
+    expect(calls.filter((call) => call.method === "deleteMessage")).toHaveLength(1);
+    expect(calls.filter((call) => call.method === "sendMessage")).toHaveLength(2);
+    expect(calls.at(-1)?.payload.text).toBe(
+      renderConfirmPrompt({
+        count: 2,
+        threadTitle: ROOT.text!,
+        lines: [
+          renderPreviewLine("Ada Lovelace", ROOT.text!),
+          renderPreviewLine("Grace", REPLY_ONE.text!),
+        ],
+        hiddenCount: 0,
+      }),
+    );
+    expect(calls.some((call) => call.method === "copyMessage")).toBe(false);
+  });
+
+  it("uses a custom title in full for the header and the source notice", async () => {
+    const custom = `Custom ${"c".repeat(180)}`;
+    await deliverCluster(bot, [ROOT]);
+    await pressRelocate(bot, calls, "title");
+    await bot.handleUpdate({
+      update_id: 80,
+      message: {
+        message_id: 400,
+        date: 1_700_000_800,
+        chat: { id: TARGET_CHAT_ID, type: "supergroup", title: "Helper" },
+        from: { id: 7, is_bot: false, first_name: "Mod" },
+        text: custom,
+      },
+    });
+
+    assertHappyRelocate(calls, {
+      title: custom,
+      copyMessageIds: [],
+      sourceMessageIds: [ROOT.messageId],
+      triggerMessageIds: [201],
+    });
+    expect((await listThreads(handle.db))[0]).toMatchObject({
+      threadTitle: custom,
+      titleSource: "custom",
+    });
+    expect(custom.length).toBeGreaterThan(THREAD_TITLE_MAX);
+  });
+
+  it("attaches the bundle to a previous thread", async () => {
+    await deliverCluster(bot, [ROOT]);
+    await pressRelocate(bot, calls, "new");
+    const headerId = (await listThreads(handle.db))[0]?.rootMessageId;
+
+    await bot.handleUpdate(sourceUpdate(60, REPLY_ONE));
+    await bot.handleUpdate(forwardUpdate(61, 401, REPLY_ONE, 7));
+    await flushRelocate(bot);
+    await pressRelocate(bot, calls, "attach");
+    await pressRelocate(bot, calls, "pick");
+
+    expect(await listThreads(handle.db)).toHaveLength(1);
+    const copies = calls.filter((call) => call.method === "copyMessage");
+    expect(copies.at(-1)?.payload).toMatchObject({
+      chat_id: TARGET_CHAT_ID,
+      from_chat_id: SOURCE_CHAT_ID,
+      message_id: REPLY_ONE.messageId,
+      reply_parameters: { message_id: headerId },
+    });
+    const sourceDeletes = calls.filter(
+      (call) =>
+        call.method === "deleteMessages" && call.payload.chat_id === SOURCE_CHAT_ID,
+    );
+    expect(sourceDeletes.at(-1)?.payload.message_ids).toEqual([REPLY_ONE.messageId]);
+  });
+
+  it("ignores a confirmation button from someone else", async () => {
+    await deliverCluster(bot, [ROOT]);
+    await pressRelocate(bot, calls, "new", { moderatorId: 8 });
+
+    expect(await listThreads(handle.db)).toHaveLength(0);
+    expect(calls.some((call) => call.method === "deleteMessages")).toBe(false);
+    expect(calls.filter((call) => call.method === "sendMessage")).toHaveLength(1);
+  });
+
+  it("drops the question when a later forward makes the bundle unmatchable", async () => {
+    await deliverCluster(bot, [ROOT]);
+    await bot.handleUpdate(
+      forwardUpdate(70, 501, { ...ROOT, text: "never stored" }, 7),
+    );
+    await flushRelocate(bot);
+
+    expect(calls.filter((call) => call.method === "deleteMessage")).toHaveLength(1);
+    expect(calls.at(-1)?.payload.text).toBe(renderMatchFailure());
+    expect(calls.some((call) => call.method === "deleteMessages")).toBe(false);
+    expect(await findMessage(handle.db, SOURCE_CHAT_ID, ROOT.messageId)).toBeTruthy();
+    expect(await listThreads(handle.db)).toHaveLength(0);
+  });
+
+  it("deletes the grouped forwards and cancels the thread", async () => {
+    await deliverCluster(bot, [ROOT, REPLY_ONE]);
+    await pressRelocate(bot, calls, "drop");
+
+    const deleted = calls.filter((call) => call.method === "deleteMessages");
+    expect(deleted).toHaveLength(1);
+    expect(deleted[0]?.payload).toMatchObject({ chat_id: TARGET_CHAT_ID });
+    expect(deleted[0]?.payload.message_ids).toEqual(expect.arrayContaining([201, 202]));
+    expect(deleted[0]?.payload.message_ids).toHaveLength(3);
+    expect(await listThreads(handle.db)).toHaveLength(0);
+    expect(await findMessage(handle.db, SOURCE_CHAT_ID, ROOT.messageId)).toBeTruthy();
+    expect((await listRelocationJobs(handle.db))[0]).toMatchObject({
+      phase: "aborted",
+      payload: { reason: "cancelled" },
+    });
+  });
+});
+
+describe("RelocationDraftStore", () => {
+  it("remaps an open draft onto the new supergroup id", () => {
+    const store = new RelocationDraftStore();
+    const draft = store.create({
+      targetChatId: 1,
+      moderatorUserId: 7,
+      plan: {
+        pair: {
+          id: 1,
+          sourceChatId: 2,
+          targetChatId: 1,
+          sourceTitle: null,
+          targetTitle: null,
+          sourceUsernameOrPath: null,
+          configuredByUserId: 1,
+          aiTitlesEnabled: false,
+          enabled: true,
+        },
+        items: [
+          {
+            targetChatId: 1,
+            targetTitle: null,
+            targetUsername: null,
+            moderatorUserId: 7,
+            triggerMessageId: 5,
+            text: "hi",
+            caption: null,
+            fingerprint: "fp",
+            origin: null,
+          },
+        ],
+        resolved: [],
+        threadTitle: "hi",
+      },
+    });
+
+    expect(store.remapChatId(1, 9)).toBe(1);
+    expect(store.getByKey(9, 7)?.id).toBe(draft.id);
+    expect(store.getByKey(1, 7)).toBeUndefined();
+    expect(store.getByKey(9, 7)?.plan.pair.targetChatId).toBe(9);
+    expect(store.getByKey(9, 7)?.plan.items[0]?.targetChatId).toBe(9);
   });
 });

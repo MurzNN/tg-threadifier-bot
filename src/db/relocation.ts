@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { desc, eq } from "drizzle-orm";
 
 import type { AppDb } from "./client.js";
 import { relocationJobs, threads } from "./schema.js";
@@ -51,7 +51,6 @@ export type StoredThread = {
   targetChatId: number;
   rootMessageId: number;
   threadTitle: string;
-  topicLabel: string;
   titleSource: string;
   initiatorUserId: number | null;
 };
@@ -71,7 +70,6 @@ function mapThread(row: typeof threads.$inferSelect): StoredThread {
     targetChatId: row.targetChatId,
     rootMessageId: row.rootMessageId,
     threadTitle: row.threadTitle,
-    topicLabel: row.topicLabel,
     titleSource: row.titleSource,
     initiatorUserId: row.initiatorUserId,
   };
@@ -121,7 +119,6 @@ export async function insertThread(
     targetChatId: number;
     rootMessageId: number;
     threadTitle: string;
-    topicLabel: string;
     titleSource: string;
     initiatorUserId: number | null;
   },
@@ -132,7 +129,6 @@ export async function insertThread(
       targetChatId: input.targetChatId,
       rootMessageId: input.rootMessageId,
       threadTitle: input.threadTitle,
-      topicLabel: input.topicLabel,
       titleSource: input.titleSource,
       initiatorUserId: input.initiatorUserId,
     })
@@ -144,5 +140,29 @@ export async function insertThread(
 
 export async function listThreads(db: AppDb): Promise<StoredThread[]> {
   const rows = await db.select().from(threads).orderBy(threads.id);
+  return rows.map(mapThread);
+}
+
+export async function findThread(
+  db: AppDb,
+  id: number,
+): Promise<StoredThread | undefined> {
+  const rows = await db.select().from(threads).where(eq(threads.id, id)).limit(1);
+  const row = rows[0];
+  return row ? mapThread(row) : undefined;
+}
+
+/** Last threads in a target chat, newest first. Flow B and relocate attach use 5. */
+export async function listRecentThreads(
+  db: AppDb,
+  targetChatId: number,
+  limit = 5,
+): Promise<StoredThread[]> {
+  const rows = await db
+    .select()
+    .from(threads)
+    .where(eq(threads.targetChatId, targetChatId))
+    .orderBy(desc(threads.createdAt), desc(threads.id))
+    .limit(limit);
   return rows.map(mapThread);
 }

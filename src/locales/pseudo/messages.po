@@ -11,6 +11,16 @@ msgstr ""
 msgid "— {authorName}"
 msgstr ""
 
+#. placeholder {0}: input.hiddenCount
+#: src/bot/relocate/templates.ts
+msgid "{0, plural, one {And # more message.} other {And # more messages.}}"
+msgstr ""
+
+#. placeholder {0}: input.count
+#: src/bot/relocate/templates.ts
+msgid "{0, plural, one {Relocate # message into a thread?} other {Relocate # messages into a thread?}}"
+msgstr ""
+
 #. placeholder {0}: pair.id
 #: src/bot/commands/pair.ts
 msgid "#{0} (disabled): {source} → {target}"
@@ -21,9 +31,19 @@ msgstr ""
 msgid "#{0} (enabled): {source} → {target}"
 msgstr ""
 
+#. Inline button in the helper chat. Opens a list of recent threads so the forwarded messages can be added to one of them.
+#: src/bot/relocate/templates.ts
+msgid "Attach to a previous thread"
+msgstr ""
+
 #. Reply to /language. {languageName} is the current bot language's own name, such as English or Français.
 #: src/bot/commands/language.ts
 msgid "Choose a language. Current: {languageName}."
+msgstr ""
+
+#. Prompt in the helper chat. The moderator picks one of the recent threads listed on the buttons below.
+#: src/bot/relocate/templates.ts
+msgid "Choose a thread for these messages."
 msgstr ""
 
 #. Telegram command menu description for /language. Opens the bot language picker.
@@ -37,6 +57,11 @@ msgid "Configured pairs:\n"
 "{0}"
 msgstr ""
 
+#. Sent in the helper chat when deleting the forwarded messages of a cancelled relocate fails. The confirmation stays open.
+#: src/bot/relocate/templates.ts
+msgid "Could not delete these messages. The confirmation is still open."
+msgstr ""
+
 #: src/bot/relocate/templates.ts
 msgid "Could not finish relocating this discussion (stopped at {phase}). No further messages were deleted."
 msgstr ""
@@ -45,9 +70,19 @@ msgstr ""
 msgid "Could not match these forwards to stored source messages, so nothing was deleted. The bot only relocates messages it has already seen."
 msgstr ""
 
+#. Inline button in the helper chat. Creates a new reply thread from the forwarded messages in this confirmation.
+#: src/bot/relocate/templates.ts
+msgid "Create new thread"
+msgstr ""
+
 #. Telegram command menu description for /unpair. Deletes the caller's chat pairs that include this chat.
 #: src/bot/commands/menu.ts
 msgid "Delete the chat pair"
+msgstr ""
+
+#. Inline button in the helper chat. Deletes the forwarded messages grouped by this confirmation and cancels creating or attaching a thread. Does not delete the originals in the main chat.
+#: src/bot/relocate/templates.ts
+msgid "Delete these messages"
 msgstr ""
 
 #: src/bot/commands/pair.ts
@@ -86,8 +121,18 @@ msgstr ""
 msgid "No enabled chat pairs. Use /pair source and /pair target, or set SOURCE_CHAT_ID, TARGET_CHAT_ID, and CONFIGURED_BY_USER_ID."
 msgstr ""
 
+#. Callback alert when the moderator wants to attach forwards but this helper chat has no threads yet.
+#: src/bot/relocate/templates.ts
+msgid "No previous threads in this chat yet."
+msgstr ""
+
 #: src/bot/commands/pair.ts
 msgid "Only chat admins can configure pairs."
+msgstr ""
+
+#. Callback answer when someone other than the moderator who forwarded the messages presses a relocate button.
+#: src/bot/relocate/templates.ts
+msgid "Only the person who forwarded these messages can choose."
 msgstr ""
 
 #. placeholder {0}: pair.sourceChatId
@@ -102,6 +147,16 @@ msgstr ""
 
 #: src/bot/commands/pair.ts
 msgid "Run /unpair inside a linked source or target chat."
+msgstr ""
+
+#. Prompt in the helper chat. The moderator's next plain message becomes the thread title and is stored in full, without the 120-character limit.
+#: src/bot/relocate/templates.ts
+msgid "Send the thread title. It will be used as entered."
+msgstr ""
+
+#. Inline button in the helper chat. Asks the moderator to type a thread title instead of the automatic one.
+#: src/bot/relocate/templates.ts
+msgid "Set custom thread title"
 msgstr ""
 
 #. Telegram command menu description for /status
@@ -140,8 +195,13 @@ msgstr ""
 msgid "That language is not available. Choose one of the buttons below."
 msgstr ""
 
+#. Callback answer when the chosen thread no longer exists in this helper chat.
 #: src/bot/relocate/templates.ts
-msgid "The message \"{topicLabel}\" from <a href=\"{linkToUser}\">{userDisplayName}</a> with responses forwarded to the chat <a href=\"{linkToTargetChatThread}\">{targetChatName}</a>. Please continue the conversation there."
+msgid "That thread is no longer available."
+msgstr ""
+
+#: src/bot/relocate/templates.ts
+msgid "The message \"{threadTitle}\" from <a href=\"{linkToUser}\">{userDisplayName}</a> with responses forwarded to the chat <a href=\"{linkToTargetChatThread}\">{targetChatName}</a>. Please continue the conversation there."
 msgstr ""
 
 #. placeholder {0}: pairs.length
@@ -195,6 +255,11 @@ msgid "This chat is the target in pair #{0} (enabled).\n"
 "Target: {target}"
 msgstr ""
 
+#. Callback answer when the relocate confirmation is no longer in memory, for example after a bot restart.
+#: src/bot/relocate/templates.ts
+msgid "This confirmation has expired."
+msgstr ""
+
 #: src/bot/commands/pair.ts
 msgid "This pair was configured by another user."
 msgstr ""
@@ -203,10 +268,20 @@ msgstr ""
 msgid "This source and target are already paired by another user."
 msgstr ""
 
+#. Relocate confirmation. {threadTitle} is the title the new thread would use. Already escaped for Telegram HTML.
+#: src/bot/relocate/templates.ts
+msgid "Thread: {threadTitle}"
+msgstr ""
+
 #: src/bot/relocate/templates.ts
 msgid "Thread: {threadTitle}\n"
 "Initiated by the user <a href=\"{linkToUser}\">{userDisplayName}</a> in the chat <a href=\"{linkToSourceChat}\">{sourceChatName}</a>.\n"
 "<a href=\"{threadLink}\">Thread link</a>."
+msgstr ""
+
+#. Inline button that adds the forwarded messages to an existing thread. {threadTitle12} is that thread's title shortened to 12 characters.
+#: src/bot/relocate/templates.ts
+msgid "Thread: {threadTitle12}"
 msgstr ""
 
 #: src/bot.ts

@@ -105,7 +105,7 @@ export function assertHappyRelocate(
   });
   expect(notice?.payload.text).toBe(
     renderSourceNotice({
-      topicLabel: options.title,
+      threadTitle: options.title,
       linkToUser,
       userDisplayName: author,
       linkToTargetChatThread: link,

@@ -38,8 +38,8 @@ main ──●──●────────●────────●─
 
 | Layer | Style |
 |-------|-------|
-| Docs, TypeScript, Lingui placeholders | **camelCase** (`sourceChat`, `{topicLabel}`) |
-| SQL tables / columns | **snake_case** (`chat_pairs`, `topic_label`) |
+| Docs, TypeScript, Lingui placeholders | **camelCase** (`sourceChat`, `{threadTitle}`) |
+| SQL tables / columns | **snake_case** (`chat_pairs`, `thread_title`) |
 
 See [workflows.md](workflows.md#naming--template-placeholders) and [architecture.md](architecture.md#naming-conventions).
 

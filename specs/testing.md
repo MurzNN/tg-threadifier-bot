@@ -122,17 +122,18 @@ Not run in CI. Use a Test DC bot that is an admin in two supergroups (read, post
 1. `/pair source` in the main chat and `/pair target` in the helper chat.
 2. Post a short root and one reply in the source, and give the bot a moment to store them.
 3. Forward both into the target as the same user, within a couple of seconds.
-4. Expect a header that starts with `Thread:` and contains `?thread=`, the reply copied under that header, the temporary forwards gone, the source messages gone, and a source notice with the same link.
-5. Forward a message the bot never stored. It should stay, with a note that nothing was deleted.
+4. Expect a confirmation in the helper chat (message count, title, preview, and buttons). Choose **Create new thread**.
+5. Expect a header that starts with `Thread:` and contains `?thread=`, the reply copied under that header, the temporary forwards gone, the source messages gone, and a source notice with the same link.
+6. Forward a message the bot never stored. It should stay, with a note that nothing was deleted.
 
-Keep the target chat limited to moderators: any forward into it from the linked source starts a relocate.
+Keep the target chat limited to moderators: any forward into it from the linked source asks for confirmation, and confirming starts a relocate.
 
 ### Scenario catalog
 
 | ID | Maps to | Emulator depth | Test DC depth (acceptance) |
 |----|---------|----------------|----------------------------|
-| `A1_relocate_happy` | Flow A | Call sequence + DB job completed; truncated `{threadTitle}` | Header + `?thread=` link; replies in thread; temps gone; source cleaned + notice |
-| `A2_single_message` | Flow A edge | Same, single message | Header only; deletes + notice |
+| `A1_relocate_happy` | Flow A | Confirmation, then **Create new thread**; call sequence + DB job completed; truncated `{threadTitle}` | Header + `?thread=` link; replies in thread; temps gone; source cleaned + notice |
+| `A2_single_message` | Flow A edge | Same, single message, after confirmation | Header only; deletes + notice |
 | `A3_match_failure_safe` | Flow A safety | No delete calls after failed match | **No deletes** on real chats; optional moderator error |
 | `A4_ai_title_optional` | Flow A + AI | Mocked LLM success + failure → fallback | Header/notice use AI topic when enabled; truncate when AI fails |
 | `B1_loose_pick_thread` | Flow B | Callback → forward/delete recorded | Message in thread; loose + prompt gone |
