@@ -1,6 +1,7 @@
 import type { Api } from "grammy";
 import type { MessageEntity } from "grammy/types";
 
+import { localeForChat } from "../../db/chatSettings.js";
 import type { ChatPair } from "../../db/chatPairs.js";
 import { listEnabledPairsByTarget } from "../../db/chatPairs.js";
 import type { AppDb } from "../../db/client.js";
@@ -16,6 +17,7 @@ import {
   type RelocationPayload,
   type RelocationPhase,
 } from "../../db/relocation.js";
+import { withLocale, type Locale } from "../../i18n.js";
 import { buildMessageLink, buildThreadLink, buildUserLink } from "../../lib/links.js";
 import type { Logger } from "../../logger.js";
 import {
@@ -66,7 +68,8 @@ const HTML_OPTIONS = {
 type ResolvedItem = {
   message: StoredMessage;
   triggerMessageId: number;
-  authorName: string;
+  /** Raw sender name. Translated fallbacks are applied in the destination locale. */
+  authorName: string | undefined;
 };
 
 type MatchAttemptFailure = {
@@ -115,6 +118,7 @@ async function emitReply(
   pair: ChatPair,
   item: ResolvedItem,
   headerMessageId: number,
+  locale: Locale,
 ): Promise<void> {
   const copied = await api.copyMessage(
     pair.targetChatId,
@@ -123,27 +127,32 @@ async function emitReply(
     { reply_parameters: { message_id: headerMessageId } },
   );
   const userId = item.message.fromUserId;
+  const authorName = withLocale(locale, () => authorLabel(item.authorName));
   if (item.message.text != null) {
-    const authored = appendAuthorSuffix({
-      body: item.message.text,
-      authorName: item.authorName,
-      userId,
-      maxLength: MESSAGE_TEXT_MAX,
-      entities: readMessageEntities(item.message.raw, "entities"),
-    });
+    const authored = withLocale(locale, () =>
+      appendAuthorSuffix({
+        body: item.message.text ?? "",
+        authorName,
+        userId,
+        maxLength: MESSAGE_TEXT_MAX,
+        entities: readMessageEntities(item.message.raw, "entities"),
+      }),
+    );
     await api.editMessageText(pair.targetChatId, copied.message_id, authored.text, {
       entities: authored.entities as unknown as MessageEntity[],
     });
     return;
   }
   if (item.message.caption != null || messageSupportsCaption(item.message.raw)) {
-    const authored = appendAuthorSuffix({
-      body: item.message.caption ?? "",
-      authorName: item.authorName,
-      userId,
-      maxLength: MESSAGE_CAPTION_MAX,
-      entities: readMessageEntities(item.message.raw, "caption_entities"),
-    });
+    const authored = withLocale(locale, () =>
+      appendAuthorSuffix({
+        body: item.message.caption ?? "",
+        authorName,
+        userId,
+        maxLength: MESSAGE_CAPTION_MAX,
+        entities: readMessageEntities(item.message.raw, "caption_entities"),
+      }),
+    );
     await api.editMessageCaption(pair.targetChatId, copied.message_id, {
       caption: authored.text,
       caption_entities: authored.entities as unknown as MessageEntity[],
@@ -200,7 +209,7 @@ async function resolveItem(
     item: {
       message: matched.message,
       triggerMessageId: item.triggerMessageId,
-      authorName: authorLabel(origin?.authorName),
+      authorName: origin?.authorName,
     },
   };
 }
@@ -319,7 +328,13 @@ export async function relocateBatch(
         reason: "match_failed",
       },
     });
-    await notify(api, pair.targetChatId, renderMatchFailure(), logger);
+    const targetLocale = await localeForChat(db, pair.targetChatId);
+    await notify(
+      api,
+      pair.targetChatId,
+      withLocale(targetLocale, () => renderMatchFailure()),
+      logger,
+    );
     return;
   }
 
@@ -340,7 +355,7 @@ export async function relocateBatch(
       fromUserId: item.message.fromUserId,
       text: item.message.text,
       caption: item.message.caption,
-      authorName: item.authorName,
+      authorName: authorLabel(item.authorName),
     })),
   };
 
@@ -364,10 +379,11 @@ export async function relocateBatch(
       { err, jobId: job.id, phase, pairId: pair.id },
       "relocation aborted",
     );
+    const targetLocale = await localeForChat(db, pair.targetChatId);
     await notify(
       api,
       pair.targetChatId,
-      renderRelocateAborted(phase),
+      withLocale(targetLocale, () => renderRelocateAborted(phase)),
       logger,
     );
   }
@@ -386,11 +402,25 @@ async function postThread(
   const root = resolved[0];
   if (!root) throw new Error("relocation batch has no root");
 
-  const titles = resolveRootTitles(root.message.text, root.message.caption);
+  const targetLocale = await localeForChat(db, pair.targetChatId);
+  const sourceLocale = await localeForChat(db, pair.sourceChatId);
+  const titles = withLocale(targetLocale, () =>
+    resolveRootTitles(root.message.text, root.message.caption),
+  );
+  const noticeTitles =
+    sourceLocale === targetLocale
+      ? titles
+      : withLocale(sourceLocale, () =>
+          resolveRootTitles(root.message.text, root.message.caption),
+        );
   const userId = root.message.fromUserId;
   const linkToUser = userId != null ? buildUserLink(userId) : "https://t.me";
-  const sourceName = sourceChatLabel(pair.sourceTitle);
-  const targetName = targetChatLabel(pair.targetTitle ?? first.targetTitle);
+  const sourceName = withLocale(targetLocale, () => sourceChatLabel(pair.sourceTitle));
+  const targetName = withLocale(sourceLocale, () =>
+    targetChatLabel(pair.targetTitle ?? first.targetTitle),
+  );
+  const headerAuthor = withLocale(targetLocale, () => authorLabel(root.authorName));
+  const noticeAuthor = withLocale(sourceLocale, () => authorLabel(root.authorName));
   const linkToSourceChat = buildMessageLink({
     chatId: pair.sourceChatId,
     messageId: root.message.messageId,
@@ -399,7 +429,7 @@ async function postThread(
   const headerVars = {
     threadTitle: titles.threadTitle,
     linkToUser,
-    userDisplayName: root.authorName,
+    userDisplayName: headerAuthor,
     linkToSourceChat,
     sourceChatName: sourceName,
     threadLink: "https://t.me",
@@ -407,7 +437,7 @@ async function postThread(
 
   const sent = await api.sendMessage(
     pair.targetChatId,
-    renderThreadHeader(headerVars),
+    withLocale(targetLocale, () => renderThreadHeader(headerVars)),
     HTML_OPTIONS,
   );
   const headerMessageId = sent.message_id;
@@ -419,7 +449,7 @@ async function postThread(
   await api.editMessageText(
     pair.targetChatId,
     headerMessageId,
-    renderThreadHeader({ ...headerVars, threadLink }),
+    withLocale(targetLocale, () => renderThreadHeader({ ...headerVars, threadLink })),
     HTML_OPTIONS,
   );
 
@@ -442,7 +472,7 @@ async function postThread(
   // the reply thread in stored chronological order, with the original author
   // appended when the message has text or a caption.
   for (const item of resolved.slice(1)) {
-    await emitReply(api, pair, item, headerMessageId);
+    await emitReply(api, pair, item, headerMessageId, targetLocale);
   }
   setPhase("populated");
   await updateRelocationJob(db, jobId, "populated", payload);
@@ -465,13 +495,15 @@ async function postThread(
 
   await api.sendMessage(
     pair.sourceChatId,
-    renderSourceNotice({
-      topicLabel: titles.topicLabel,
-      linkToUser,
-      userDisplayName: root.authorName,
-      linkToTargetChatThread: threadLink,
-      targetChatName: targetName,
-    }),
+    withLocale(sourceLocale, () =>
+      renderSourceNotice({
+        topicLabel: noticeTitles.topicLabel,
+        linkToUser,
+        userDisplayName: noticeAuthor,
+        linkToTargetChatThread: threadLink,
+        targetChatName: targetName,
+      }),
+    ),
     HTML_OPTIONS,
   );
   setPhase("completed");

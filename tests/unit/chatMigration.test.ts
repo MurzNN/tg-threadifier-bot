@@ -10,6 +10,7 @@ import {
   PairDraftStore,
   upsertChatPair,
 } from "../../src/db/chatPairs.js";
+import { getChatLocale, setChatLocale } from "../../src/db/chatSettings.js";
 import { remapChatId } from "../../src/db/chatMigration.js";
 import type { DbHandle } from "../../src/db/client.js";
 import {
@@ -142,6 +143,7 @@ describe("remapChatId", () => {
       messages: 1,
       threads: 1,
       relocationJobs: 1,
+      chatSettings: 0,
     });
 
     const pairs = await listEnabledPairs(handle.db);
@@ -169,6 +171,7 @@ describe("remapChatId", () => {
       messages: 0,
       threads: 0,
       relocationJobs: 0,
+      chatSettings: 0,
     });
   });
 
@@ -217,6 +220,20 @@ describe("remapChatId", () => {
     expect(all.find((pair) => pair.id === stale!.id)?.sourceChatId).toBe(
       OLD_GROUP,
     );
+  });
+
+  it("moves the chat language onto the supergroup id", async () => {
+    await setChatLocale(handle.db, OLD_GROUP, "fr");
+    const result = await remapChatId(handle.db, OLD_GROUP, NEW_SUPERGROUP);
+    expect(result.chatSettings).toBe(1);
+    expect(await getChatLocale(handle.db, NEW_SUPERGROUP)).toBe("fr");
+    expect(await getChatLocale(handle.db, OLD_GROUP)).toBeNull();
+
+    await setChatLocale(handle.db, OLD_GROUP, "es");
+    await setChatLocale(handle.db, NEW_SUPERGROUP, "ru");
+    await remapChatId(handle.db, OLD_GROUP, NEW_SUPERGROUP);
+    expect(await getChatLocale(handle.db, NEW_SUPERGROUP)).toBe("ru");
+    expect(await getChatLocale(handle.db, OLD_GROUP)).toBeNull();
   });
 });
 

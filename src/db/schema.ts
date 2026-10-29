@@ -68,6 +68,30 @@ export const threads = pgTable(
   (t) => [index("threads_target_created_idx").on(t.targetChatId, t.createdAt)],
 );
 
+/**
+ * One row per Telegram user. Add further settings as columns.
+ * `locale` is the fallback command language when the chat has none.
+ */
+export const userSettings = pgTable("user_settings", {
+  userId: bigint("user_id", { mode: "number" }).primaryKey(),
+  locale: text("locale").notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true, mode: "date" })
+    .notNull()
+    .defaultNow(),
+});
+
+/**
+ * One row per Telegram chat. Add further settings as columns.
+ * `locale` is the command language for this chat.
+ */
+export const chatSettings = pgTable("chat_settings", {
+  chatId: bigint("chat_id", { mode: "number" }).primaryKey(),
+  locale: text("locale").notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true, mode: "date" })
+    .notNull()
+    .defaultNow(),
+});
+
 export const relocationJobs = pgTable("relocation_jobs", {
   id: serial("id").primaryKey(),
   chatPairId: integer("chat_pair_id").notNull(),
@@ -85,5 +109,7 @@ export const schema = {
   messages,
   chatPairs,
   threads,
+  userSettings,
+  chatSettings,
   relocationJobs,
 };

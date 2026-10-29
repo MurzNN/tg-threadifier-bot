@@ -2,6 +2,7 @@ import type { ApiCallFn, Bot } from "grammy";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { createBot, flushRelocate, stopRelocate } from "../../src/bot.js";
+import { setChatLocale } from "../../src/db/chatSettings.js";
 import type { DbHandle } from "../../src/db/client.js";
 import { findMessage } from "../../src/db/messages.js";
 import {
@@ -239,6 +240,20 @@ describe("Flow A relocate (API transformer)", () => {
       threadTitle: `Hello <b> & "x"`,
       topicLabel: `Hello <b> & "x"`,
     });
+  });
+
+  it("renders the header and the source notice in each chat's language", async () => {
+    await setChatLocale(handle.db, TARGET_CHAT_ID, "ru");
+    await setChatLocale(handle.db, SOURCE_CHAT_ID, "es");
+    await deliverCluster(bot, [ROOT]);
+
+    const header = calls.find((call) => call.method === "editMessageText");
+    expect(String(header?.payload.text)).toContain("Тред:");
+    expect(String(header?.payload.text)).toContain("Ссылка на тред");
+    const notice = calls.filter((call) => call.method === "sendMessage").at(-1);
+    expect(String(notice?.payload.text)).toContain("Continúa la conversación allí.");
+    expect(notice?.payload.chat_id).toBe(SOURCE_CHAT_ID);
+    expect(header?.payload.chat_id).toBe(TARGET_CHAT_ID);
   });
 
   it("uses the media fallback when the root has no text", async () => {

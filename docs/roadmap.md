@@ -116,6 +116,8 @@ Moved earlier so Flow A/B work can be exercised on a real cluster / Test DC with
 - [ ] Multi-tenant hosting (many unrelated communities on one deployment)
 - [ ] Moderator “preview / confirm” before deletes
 - [x] Lingui catalogs for `es`, `fr`, and `ru` (loaded with `en`; default locale stays `en`)
+- [x] Per-user command language: `/language` in the command menu, and `/start` stores the Telegram account language when it is shipped (`en` otherwise).
+- [x] Per-chat language: `/language` stores `chat_settings.locale` for the current chat. Command replies use that chat, then the caller's `user_settings.locale`, then the account language. Relocate copy uses the destination chat's locale, otherwise `en`.
 - [ ] Per-chat/pair locale setting UX (overrides remain per locale)
 - [ ] Metrics dashboard
 - [ ] Mini App UI automation inside Telegram WebView (if still needed beyond `C1` API tests)

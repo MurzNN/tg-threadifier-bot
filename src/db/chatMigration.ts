@@ -3,13 +3,14 @@ import { and, eq, inArray } from "drizzle-orm";
 import { disableOtherEnabledPairsForTarget } from "./chatPairs.js";
 import type { AppDb } from "./client.js";
 import type { RelocationPayload } from "./relocation.js";
-import { chatPairs, messages, relocationJobs, threads } from "./schema.js";
+import { chatPairs, chatSettings, messages, relocationJobs, threads } from "./schema.js";
 
 export type ChatIdRemapResult = {
   chatPairs: number;
   messages: number;
   threads: number;
   relocationJobs: number;
+  chatSettings: number;
 };
 
 /**
@@ -78,7 +79,7 @@ export async function remapChatId(
   newChatId: number,
 ): Promise<ChatIdRemapResult> {
   if (oldChatId === newChatId) {
-    return { chatPairs: 0, messages: 0, threads: 0, relocationJobs: 0 };
+    return { chatPairs: 0, messages: 0, threads: 0, relocationJobs: 0, chatSettings: 0 };
   }
 
   const asSource = await db
@@ -174,10 +175,24 @@ export async function remapChatId(
     relocationUpdated += 1;
   }
 
+  const [settingsOnNewId] = await db
+    .select({ chatId: chatSettings.chatId })
+    .from(chatSettings)
+    .where(eq(chatSettings.chatId, newChatId))
+    .limit(1);
+  const movedChatSettings = settingsOnNewId
+    ? await db.delete(chatSettings).where(eq(chatSettings.chatId, oldChatId)).returning()
+    : await db
+        .update(chatSettings)
+        .set({ chatId: newChatId })
+        .where(eq(chatSettings.chatId, oldChatId))
+        .returning();
+
   return {
     chatPairs: touchedPairIds.size,
     messages: movedMessages.length,
     threads: movedThreads.length,
     relocationJobs: relocationUpdated,
+    chatSettings: movedChatSettings.length,
   };
 }

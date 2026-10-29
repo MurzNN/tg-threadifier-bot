@@ -163,6 +163,18 @@ Target chat stays thread-oriented; accidental top-level posts are recoverable wi
 
 ---
 
+## Command menu and language
+
+On startup the bot publishes its command menu with `setMyCommands` for private chats and for all group chats. Users whose Telegram language is `es`, `fr`, or `ru` get descriptions in that language. Everyone else gets the English menu.
+
+| Command | Who | Behavior |
+|---------|-----|----------|
+| `/start` | Anyone | Welcome text in this chat's language when one is set. Otherwise the caller's account language. Stores `user_settings.locale` from the account `language_code` when the base language is `en`, `es`, `fr`, or `ru` (`es-MX` counts as `es`). Any other code stores `en`. This does not replace a `/language` choice for the chat. |
+| `/language` | Anyone | Shows English, Español, Français, and Русский for this chat. A button or a code (`/language fr`) stores `chat_settings.locale`. An unknown code does not change it. Another chat keeps its own language. |
+| `/pair`, `/status`, `/unpair` | See Flow C | The reply uses this chat's locale, then the caller's `user_settings.locale`, then the account language. Reading those commands does not write a row. |
+
+A thread header is posted in the target chat's language. The redirect notice is posted in the source chat's language. With no `chat_settings` row, both stay on the English catalog. They do not follow a user's private fallback.
+
 ## Flow C — Operator configures chat pair
 
 **Actor:** Operator / admin  
@@ -183,7 +195,7 @@ Until the Mini App lands, operators configure a pair with:
 
 Admin check uses Telegram chat member status (`creator` / `administrator`). Bot must already be a member of both chats. Message ingest starts for chats that appear in an enabled pair. At most one enabled pair may share a given `targetChat`.
 
-When Telegram upgrades a basic group to a supergroup, the chat id changes. The bot listens for `migrate_to_chat_id` (in the old group) and `migrate_from_chat_id` (in the new supergroup) and rewrites that id in `chat_pairs`, stored `messages`, `threads`, unfinished `relocation_jobs` payloads, and any in-memory `/pair` draft so the pair stays linked without re-running `/pair`. If remapping would collide with an existing `(source, target)` row, the remapped row is soft-disabled and the existing row is kept.
+When Telegram upgrades a basic group to a supergroup, the chat id changes. The bot listens for `migrate_to_chat_id` (in the old group) and `migrate_from_chat_id` (in the new supergroup) and rewrites that id in `chat_pairs`, `chat_settings`, stored `messages`, `threads`, unfinished `relocation_jobs` payloads, and any in-memory `/pair` draft so the pair stays linked without re-running `/pair`. If remapping would collide with an existing `(source, target)` row, the remapped row is soft-disabled and the existing row is kept. A `chat_settings` row already stored under the new id is kept, and the old row is dropped.
 
 ### Steps (logical — full product)
 

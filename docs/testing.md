@@ -46,7 +46,7 @@ scripts/
 - Feed updates via `bot.handleUpdate(...)`.
 - Assert call sequences (e.g. `sendMessage` → `forwardMessage` → `deleteMessage`) and Lingui/`en` substrings.
 
-M0 sample: `tests/unit/start.test.ts` records `sendMessage` for `/start` against the English Lingui default.
+M0 sample: `tests/unit/start.test.ts` records `sendMessage` for `/start` against the English Lingui default. `tests/unit/language.test.ts` covers account language on `/start` (`ru`, `es-MX`, unknown → `en`), `/language` stored per chat, and the command menu.
 
 Command handlers: `tests/unit/pair.test.ts`. It uses in-memory PGlite from `createTestDb()` (`tests/helpers/db.ts`), `createBot` with `botInfo` set, an API transformer that records outgoing calls, and `bot.handleUpdate` for group and private updates. Assert `sendMessage` text with `expect.stringContaining` on stable English fragments. Cover enabling a pair while another enabled row already owns the same target (siblings must soft-disable). For a slash-command change, run that file before `nub run test`.
 

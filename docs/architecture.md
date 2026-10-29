@@ -104,7 +104,8 @@ Store overrides in the DB (e.g. `message_template_overrides`: `chat_pair_id`, `t
 - Keep Telegram HTML (`<a href="...">`, etc.) inside messages; translators and operators must preserve placeholders and tags. Escape user-derived values before interpolation.
 - Dynamic parts include `threadTitle`, `topicLabel`, `userDisplayName`, `threadLink`, chat titles.
 - Message templates in `workflows.md` are the **English meaning** reference for defaults; Lingui catalogs are the shipped defaults; DB overrides are the per-community runtime customization.
-- Resolve locale per chat or per operator setting (exact rule TBD): start with a default locale (e.g. `en`) and a per-pair (or per-chat) override once config exists.
+- Command replies (`/start`, `/language`, `/pair`, `/status`, `/unpair`) use this chat's locale, then the calling user's locale, then the account language, then `en`. `/language` stores the choice on `chat_settings` (one row per chat; further settings are additional columns) and is not admin-gated. `/start` stores Telegram `language_code` on `user_settings` when it is `en`, `es`, `fr`, or `ru` (region tags use the base language, so `es-MX` is `es`); any other code stores `en`. That user row is the fallback for chats with no locale of their own, and `/start` does not replace a chat's `/language` choice. A chat that already has a locale keeps it for the `/start` reply.
+- Relocate messages use the locale of the chat they are posted in, then `en`. The thread header, match and abort notices, and author suffixes use the target chat. The source notice uses the source chat. A user's private fallback does not apply.
 - Ship with at least one complete locale catalog from day one of string introduction; additional languages are a product milestone, not a reason to bypass Lingui early.
 
 ### Tooling
@@ -147,7 +148,8 @@ One process / one container runs both the Telegram bot backend and the Mini App 
 - **Forward detector:** when messages appear in `targetChat`, decide if they are a moderator-triggered forward batch from the linked `sourceChat`.
 - **Relocate workflow:** implement Flow A (header → thread link → re-forward → deletes → source notice) in clear phases.
 - **Loose-message workflow:** implement Flow B (prompt + callbacks).
-- **Admin / config handlers:** pair chats; health; maybe dry-run flags for Test DC. See [Operator commands](#operator-commands).
+- **Admin / config handlers:** pair chats; health; maybe dry-run flags for Test DC. See [Operator commands](#operator-commands). Command replies use the caller's language (`/language`, and the account language on `/start`).
+- **Command menu:** on startup, `setMyCommands` publishes `start`, `language`, `pair`, `status`, and `unpair` for private chats and all group chats. The menu with no `language_code` is English. `es`, `fr`, and `ru` each get a menu in that language.
 
 ### Message store
 
@@ -206,6 +208,26 @@ Handlers live in `src/bot/commands/pair.ts`. Persistence lives in `src/db/chatPa
 | `title_source` | `truncated` \| `ai`; TS: `titleSource` |
 | `initiator_user_id` | TS: `initiatorUserId` |
 | `created_at` | For “last 5” ordering |
+
+**`user_settings`**
+
+One row per Telegram user. Add further per-user settings as columns; updates touch only the columns they change.
+
+| Field | Notes |
+|-------|-------|
+| `user_id` | Telegram user id; primary key |
+| `locale` | `en`, `es`, `fr`, or `ru` — fallback command language when the chat has none |
+| `updated_at` | Last change to the row |
+
+**`chat_settings`**
+
+One row per Telegram chat. Add further per-chat settings as columns; updates touch only the columns they change. A group → supergroup upgrade rewrites `chat_id`. If the new id already has a row, that row is kept and the old one is dropped.
+
+| Field | Notes |
+|-------|-------|
+| `chat_id` | Telegram chat id; primary key |
+| `locale` | `en`, `es`, `fr`, or `ru` — language of command replies in this chat |
+| `updated_at` | Last change to the row |
 
 Indexes: `(chat_id, message_id)` unique; `(target_chat_id, created_at desc)` on threads; lookup helpers for fingerprint + date windows when matching forwards.
 
@@ -281,7 +303,7 @@ Environment (illustrative):
 - `PORT` — HTTP listen port for Mini App + health + webhook
 - Optional: `LOG_LEVEL`, feature flags
 
-Chat IDs live in `chat_pairs` after pairing. Until M4, operators can also use `/pair`, `/unpair`, `/status` (see [workflows.md](workflows.md) Flow C). `/pair` with no arguments lists every stored pair in a private chat and reports the current chat's pairing in a group. Helm values map secrets into the container env.
+Chat IDs live in `chat_pairs` after pairing. Until M4, operators can also use `/pair`, `/unpair`, `/status` (see [workflows.md](workflows.md) Flow C). `/pair` with no arguments lists every stored pair in a private chat and reports the current chat's pairing in a group. `/language` sets this chat's command language. `/start` stores the caller's fallback language from the Telegram account when that language is shipped, otherwise `en`. Helm values map secrets into the container env.
 
 ## Testing strategy
 

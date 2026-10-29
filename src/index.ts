@@ -1,6 +1,7 @@
 import { serve } from "@hono/node-server";
 
 import { createBot, flushRelocate } from "./bot.js";
+import { publishCommandMenu } from "./bot/commands/menu.js";
 import { logPollingReady } from "./bot/diagnostics.js";
 import { createDb } from "./db/client.js";
 import { listEnabledPairs } from "./db/chatPairs.js";
@@ -32,6 +33,11 @@ async function main() {
 
   bot.start({
     onStart: async (me) => {
+      try {
+        await publishCommandMenu(bot.api);
+      } catch (err) {
+        logger.error({ err }, "failed to publish the command menu");
+      }
       logPollingReady(logger, me, await listEnabledPairs(db), env.DATABASE_URL);
     },
   });

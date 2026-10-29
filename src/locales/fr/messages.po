@@ -21,6 +21,16 @@ msgstr "#{0} (désactivé) : {source} → {target}"
 msgid "#{0} (enabled): {source} → {target}"
 msgstr "#{0} (activé) : {source} → {target}"
 
+#. Reply to /language. {languageName} is the current bot language's own name, such as English or Français.
+#: src/bot/commands/language.ts
+msgid "Choose a language. Current: {languageName}."
+msgstr "Choisissez une langue. Langue actuelle : {languageName}."
+
+#. Telegram command menu description for /language. Opens the bot language picker.
+#: src/bot/commands/menu.ts
+msgid "Choose language"
+msgstr "Choisir la langue"
+
 #. placeholder {0}: lines.join("\n")
 #: src/bot/commands/pair.ts
 msgid "Configured pairs:\n"
@@ -36,6 +46,11 @@ msgstr "Impossible de terminer le déplacement de cette discussion (arrêt à l'
 msgid "Could not match these forwards to stored source messages, so nothing was deleted. The bot only relocates messages it has already seen."
 msgstr "Impossible d'associer ces transferts aux messages source enregistrés, donc rien n'a été supprimé. Le bot ne déplace que les messages qu'il a déjà vus."
 
+#. Telegram command menu description for /unpair. Disables the chat pair that includes this chat.
+#: src/bot/commands/menu.ts
+msgid "Disable the chat pair"
+msgstr "Désactiver la paire de chats"
+
 #: src/bot/commands/pair.ts
 msgid "Disabled {n} chat pair(s) involving this chat."
 msgstr "{n} paire(s) de chats incluant ce chat ont été désactivées."
@@ -46,6 +61,16 @@ msgid "Enabled pairs:\n"
 "{0}"
 msgstr "Paires activées :\n"
 "{0}"
+
+#. Confirmation after the user picks a bot language. {languageName} is that language's own name, such as Español.
+#: src/bot/commands/language.ts
+msgid "Language set to {languageName}."
+msgstr "Langue définie : {languageName}."
+
+#. Telegram command menu description for /pair. Links a source chat and a target chat.
+#: src/bot/commands/menu.ts
+msgid "Link source and target chats"
+msgstr "Lier les chats source et cible"
 
 #: src/bot/relocate/templates.ts
 msgid "Media message"
@@ -81,6 +106,16 @@ msgstr "Exécutez /pair source ou /pair target dans les chats de groupe pour les
 msgid "Run /unpair inside a linked source or target chat."
 msgstr "Exécutez /unpair dans un chat source ou cible déjà lié."
 
+#. Telegram command menu description for /status
+#: src/bot/commands/menu.ts
+msgid "Show the enabled chat pair"
+msgstr "Afficher la paire de chats activée"
+
+#. Telegram command menu description for /start
+#: src/bot/commands/menu.ts
+msgid "Show the welcome message"
+msgstr "Afficher le message d'accueil"
+
 #: src/bot/commands/pair.ts
 msgid "Source and target must be different chats. Use /pair again in each chat."
 msgstr "La source et la cible doivent être des chats différents. Relancez /pair dans chaque chat."
@@ -102,6 +137,10 @@ msgstr "chat cible"
 #: src/bot/commands/pair.ts
 msgid "Target chat recorded ({0}). Now run /pair source in the main chat."
 msgstr "Chat cible enregistré ({0}). Exécutez maintenant /pair source dans le chat principal."
+
+#: src/bot/commands/language.ts
+msgid "That language is not available. Choose one of the buttons below."
+msgstr "Cette langue n'est pas disponible. Choisissez l'un des boutons ci-dessous."
 
 #: src/bot/relocate/templates.ts
 msgid "The message \"{topicLabel}\" from <a href=\"{linkToUser}\">{userDisplayName}</a> with responses forwarded to the chat <a href=\"{linkToTargetChatThread}\">{targetChatName}</a>. Please continue the conversation there."
