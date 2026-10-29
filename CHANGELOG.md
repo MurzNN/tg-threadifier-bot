@@ -1,6 +1,12 @@
 # Changelog
 
 
+## [0.5.7](https://github.com/MurzNN/tg-threadifier-bot/compare/v0.5.6...v0.5.7) (2026-10-29)
+
+### Bug Fixes
+
+* **bot:** point /start at the operator guide ([c870e33](https://github.com/MurzNN/tg-threadifier-bot/commit/c870e33b60e7618735533573ab1d6aa7ed00e31f))
+
 ## [0.5.6](https://github.com/MurzNN/tg-threadifier-bot/compare/v0.5.5...v0.5.6) (2026-10-29)
 
 ## [0.5.5](https://github.com/MurzNN/tg-threadifier-bot/compare/v0.5.4...v0.5.5) (2026-10-29)
