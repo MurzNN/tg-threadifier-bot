@@ -18,3 +18,4 @@ coverage/
 *.session-journal
 data/
 e2e-login-session/
+.agents/skills
