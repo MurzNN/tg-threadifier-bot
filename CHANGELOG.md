@@ -1,6 +1,12 @@
 # Changelog
 
 
+## [0.5.5](https://github.com/MurzNN/tg-threadifier-bot/compare/v0.5.4...v0.5.5) (2026-10-29)
+
+### Bug Fixes
+
+* **i18n:** prefer ветка and связка in Russian copy ([68c87ac](https://github.com/MurzNN/tg-threadifier-bot/commit/68c87aca8be9bc7ec883f7d00df97e37b3941846))
+
 ## [0.5.4](https://github.com/MurzNN/tg-threadifier-bot/compare/v0.5.3...v0.5.4) (2026-10-29)
 
 ### Features
