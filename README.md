@@ -12,11 +12,11 @@ In topic-strict group chats, offtopic posts attract replies before moderators no
 2. The bot recognizes those forwards, posts a thread header in the target, copies the other messages into that thread (each one keeps its author’s name at the end of the text), and deletes the temporary forwards.
 3. The bot deletes the originals in the source and posts a notice with a link to the new thread.
 
-See [docs/workflows.md](docs/workflows.md) for full scenarios, including “no loose messages in target chat” enforcement.
+See [specs/workflows.md](specs/workflows.md) for full scenarios, including “no loose messages in target chat” enforcement. End-user instructions: [GitHub Pages](https://murznn.github.io/tg-threadifier-bot/) (or `nub run docs:dev` locally).
 
 ## Status
 
-**M2 Flow A:** A forward from the linked source into the target becomes a reply thread (header, copied replies, deletes, source notice). `A1`–`A3` run in CI against a local Bot API stub. A manual Test DC walkthrough is still the release check — [docs/testing.md](docs/testing.md#manual-a1-until-m5-automation).
+**M2 Flow A:** A forward from the linked source into the target becomes a reply thread (header, copied replies, deletes, source notice). `A1`–`A3` run in CI against a local Bot API stub. A manual Test DC walkthrough is still the release check — [specs/testing.md](specs/testing.md#manual-a1-until-m5-automation).
 
 ## Stack
 
@@ -28,9 +28,9 @@ See [docs/workflows.md](docs/workflows.md) for full scenarios, including “no l
 - **DB:** [Drizzle](https://orm.drizzle.team/) — PostgreSQL dialect (PGlite locally, Postgres in Helm)
 - **Mini App (upcoming):** React + Vite static SPA (same app; no SSR for v1)
 - **Deploy:** Docker image + Helm chart
-- **Testing:** Vitest + GrammY API transformers (local Bot API emulator and Test DC + mtcute later) — [docs/testing.md](docs/testing.md)
+- **Testing:** Vitest + GrammY API transformers (local Bot API emulator and Test DC + mtcute later) — [specs/testing.md](specs/testing.md)
 
-Details: [docs/architecture.md](docs/architecture.md).
+Details: [specs/architecture.md](specs/architecture.md).
 
 ## Quickstart
 
@@ -64,23 +64,30 @@ Chart details: [charts/tg-threadifier-bot/README.md](charts/tg-threadifier-bot/R
 ### CI & releases
 
 - **CI:** GitHub Actions (`nubjs/setup-nub`) runs typecheck, lint, and `nub run test` on PRs and `main`.
-- **Release:** [release-it](https://github.com/release-it/release-it) on `main` updates `CHANGELOG.md`, tags, creates a GitHub Release, and publishes `ghcr.io/<owner>/tg-threadifier-bot` when Conventional Commits warrant a bump (or via workflow_dispatch `increment`). See [docs/contributing.md](docs/contributing.md#releases--versioning).
+- **Docs site:** pushes that touch `docs/` deploy the Starlight user guide to [GitHub Pages](https://murznn.github.io/tg-threadifier-bot/) (set **Settings → Pages → Source: GitHub Actions** once).
+- **Release:** [release-it](https://github.com/release-it/release-it) on `main` updates `CHANGELOG.md`, tags, creates a GitHub Release, and publishes `ghcr.io/<owner>/tg-threadifier-bot` when Conventional Commits warrant a bump (or via workflow_dispatch `increment`). See [specs/contributing.md](specs/contributing.md#releases--versioning).
 
 ## Docs
 
+### User guide
+
+End-user instructions for members, moderators, and operators: [https://murznn.github.io/tg-threadifier-bot/](https://murznn.github.io/tg-threadifier-bot/). Locally: `nub run docs:dev` (preview build with `nub run docs:build` / `nub run docs:preview`).
+
+### Specs
+
 | Document | Description |
 |----------|-------------|
-| [docs/brief.md](docs/brief.md) | Problem & vision |
-| [docs/workflows.md](docs/workflows.md) | User journeys |
-| [docs/architecture.md](docs/architecture.md) | Technical design |
-| [docs/testing.md](docs/testing.md) | Unit, emulator, Test DC E2E |
-| [docs/roadmap.md](docs/roadmap.md) | Milestones |
-| [docs/contributing.md](docs/contributing.md) | Commits, branches, PRs |
+| [specs/brief.md](specs/brief.md) | Problem & vision |
+| [specs/workflows.md](specs/workflows.md) | User journeys |
+| [specs/architecture.md](specs/architecture.md) | Technical design |
+| [specs/testing.md](specs/testing.md) | Unit, emulator, Test DC E2E |
+| [specs/roadmap.md](specs/roadmap.md) | Milestones |
+| [specs/contributing.md](specs/contributing.md) | Commits, branches, PRs |
 | [AGENTS.md](AGENTS.md) | Instructions for AI coding agents |
 
 ## Contributing
 
-Use [Conventional Commits](https://www.conventionalcommits.org/) and short-lived branches off `main`. See [docs/contributing.md](docs/contributing.md).
+Use [Conventional Commits](https://www.conventionalcommits.org/) and short-lived branches off `main`. See [specs/contributing.md](specs/contributing.md).
 
 ## License
 

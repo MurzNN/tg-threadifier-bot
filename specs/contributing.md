@@ -101,7 +101,7 @@ chore(ci): run unit and emulator integration on PRs
 1. **Title** — same Conventional Commit style as the primary change (or a short summary if the PR contains several related commits).
 2. **Description** — what / why; link issues or roadmap milestones; note Test DC or emulator impact.
 3. **Test plan** — checklist (unit, emulator scenarios, manual Test DC if relevant). See [testing.md](testing.md).
-4. **Docs** — if behavior changes, update `workflows` / `architecture` / `roadmap` / `testing` in the same PR ([AGENTS.md](../AGENTS.md)).
+4. **Docs** — if behavior changes, update `workflows` / `architecture` / `roadmap` / `testing` under `specs/` in the same PR ([AGENTS.md](../AGENTS.md)). If member/moderator/operator UX changes, update the Starlight pages under `docs/src/content/docs/` too.
 5. **CI** — PR must pass unit + local Bot API emulator integration. Test DC E2E is the release gate, not necessarily every PR.
 6. **Review** — prefer approval before merge; squash or rebase merge is fine once the team picks a default — keep `main` history readable (prefer squash for noisy WIP branches).
 
@@ -117,7 +117,7 @@ chore(ci): run unit and emulator integration on PRs
 - [ ] Manual / Test DC (if behavior touches Telegram)
 
 ## Docs
-- [ ] Updated relevant files under docs/
+- [ ] Updated relevant files under specs/ and/or end-user docs/
 ```
 
 ---
@@ -137,6 +137,7 @@ Releases are automated with [release-it](https://github.com/release-it/release-i
 **CI workflows:**
 
 - [`.github/workflows/ci.yml`](../.github/workflows/ci.yml) — typecheck, lint, and `nub run test` on PRs and pushes to `main`
+- [`.github/workflows/docs.yml`](../.github/workflows/docs.yml) — builds the Starlight user guide and deploys to GitHub Pages
 - [`.github/workflows/release.yml`](../.github/workflows/release.yml) — after tests on `main`, runs `release-it --ci` when there is a releasable bump, then builds/pushes the image to GHCR
 
 `docs` / `chore` / `ci` commits alone usually **do not** cut a release. To force a version (e.g. first publish), use **Actions → Release → Run workflow** and set `increment` (`patch`, `minor`, `major`, or `x.y.z`).
@@ -156,4 +157,4 @@ Registry publish is disabled (`private: true`); the distributable artifact is th
 - Do not amend published commits or force-push `main`.
 - Do not change git config.
 - Create commits only when the human asks; follow Conventional Commit format above.
-- Prefer updating docs in the same change set as behavior.
+- Prefer updating specs (and end-user `docs/` when UX changes) in the same change set as behavior.

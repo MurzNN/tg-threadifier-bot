@@ -6,6 +6,8 @@ export default tseslint.config(
   {
     ignores: [
       "dist/**",
+      "docs/dist/**",
+      "docs/.astro/**",
       "coverage/**",
       ".cache/**",
     ],

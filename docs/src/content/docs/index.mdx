@@ -1,0 +1,26 @@
+---
+title: Threadifier
+description: Telegram bot that moves offtopic digressions into helper-chat threads and leaves a clear redirect in the main chat.
+---
+
+**Threadifier** keeps topic-strict group chats tidy. When a digression starts, a moderator forwards the offtopic messages into a linked helper chat. The bot rebuilds them as a reply thread, cleans up both chats, and posts a redirect notice so everyone knows where to continue.
+
+## Who this guide is for
+
+| Guide | You are… |
+|-------|----------|
+| [For members](./members/) | Someone who chats in the main or helper group |
+| [For moderators](./moderators/) | Someone who forwards offtopic clusters to relocate them |
+| [For operators](./operators/) | An admin who installs the bot, grants rights, and pairs chats |
+
+## How it works (short)
+
+1. A moderator selects offtopic messages in the **main chat** and forwards them to the **helper chat**.
+2. The bot posts a thread header in the helper chat, copies the other messages into that thread (each keeps its author’s name), and deletes the temporary forwards.
+3. The bot deletes the originals in the main chat and posts a notice with a link to the new thread.
+
+Messages the bot posts can appear in English, Spanish, French, or Russian, depending on each chat’s language setting. Operators may also customize the wording.
+
+## Source code
+
+This project is open source on [GitHub](https://github.com/MurzNN/tg-threadifier-bot).

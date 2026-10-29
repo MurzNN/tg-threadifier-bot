@@ -6,6 +6,8 @@ yarn.lock
 bun.lock
 bun.lockb
 dist/
+docs/dist/
+docs/.astro/
 coverage/
 .cache/
 .env
