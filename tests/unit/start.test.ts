@@ -1,3 +1,4 @@
+import { t } from "@lingui/core/macro";
 import type { ApiCallFn, Bot } from "grammy";
 import type { UserFromGetMe } from "grammy/types";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
@@ -55,7 +56,7 @@ describe("/start (GrammY API transformer)", () => {
     await handle.close();
   });
 
-  it("replies with the English Lingui default", async () => {
+  it("replies with the welcome message", async () => {
     await bot.handleUpdate({
       update_id: 1,
       message: {
@@ -72,7 +73,7 @@ describe("/start (GrammY API transformer)", () => {
     expect(calls[0]?.method).toBe("sendMessage");
     expect(calls[0]?.payload).toMatchObject({
       chat_id: 100,
-      text: "Threadifier is online. Admins: /pair source and /pair target in the groups, or set SOURCE_CHAT_ID, TARGET_CHAT_ID, and CONFIGURED_BY_USER_ID. Check /status.",
+      text: t`Threadifier is online. Admins: /pair source and /pair target in the groups, or set SOURCE_CHAT_ID, TARGET_CHAT_ID, and CONFIGURED_BY_USER_ID. Check /status.`,
     });
   });
 });

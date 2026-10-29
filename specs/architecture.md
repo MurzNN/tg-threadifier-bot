@@ -110,8 +110,8 @@ Store overrides in the DB (e.g. `message_template_overrides`: `chat_pair_id`, `t
 
 ### Tooling
 
-- User-facing defaults use the `t` macro from `@lingui/core/macro`. After adding or changing a `t` string, run `nub run i18n:extract` (rewrites `src/locales/{locale}/messages.po` for `en`, `es`, `fr`, and `ru`). `@lingui/vite-plugin` compiles those `.po` catalogs when they are imported (`src/i18n.ts`); there is no `lingui compile` step and no generated `messages.ts`.
-- `tests/setup.ts` calls `setupI18n()`. Unit tests assert English substrings of the rendered reply.
+- User-facing defaults use the `t` macro from `@lingui/core/macro`. After adding or changing a `t` string, run `nub run i18n:extract` (rewrites `src/locales/{locale}/messages.po` for `en`, `es`, `fr`, `ru`, and the test locale `pseudo`). `@lingui/vite-plugin` compiles those `.po` catalogs when they are imported; production loads only `en`, `es`, `fr`, and `ru` (`src/i18n.ts`). There is no `lingui compile` step and no generated `messages.ts`. `pseudo` is not a picker language.
+- `tests/setup.ts` calls `setupI18n()`, then activates the Lingui `pseudo` locale. A reply assertion renders that same message with `t` (or the relocate render helper). Tests do not paste English or translated copy.
 - Unit-test critical messages with a fixed locale to lock placeholder wiring (links, truncation labels).
 - Unit/integration tests for override resolution (override wins; missing override falls back; invalid placeholder rejected on save).
 

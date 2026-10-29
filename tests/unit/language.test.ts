@@ -1,3 +1,4 @@
+import { t } from "@lingui/core/macro";
 import type { ApiCallFn, Bot } from "grammy";
 import type { UserFromGetMe } from "grammy/types";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
@@ -7,6 +8,7 @@ import { publishCommandMenu } from "../../src/bot/commands/menu.js";
 import type { DbHandle } from "../../src/db/client.js";
 import { getChatLocale } from "../../src/db/chatSettings.js";
 import { getUserLocale } from "../../src/db/userSettings.js";
+import { localeEndonym } from "../../src/i18n.js";
 import { createLogger } from "../../src/logger.js";
 import { createTestDb } from "../helpers/db.js";
 
@@ -31,12 +33,13 @@ const botInfo = {
   supports_join_request_queries: false,
 } satisfies UserFromGetMe;
 
-const welcome = {
-  en: "Threadifier is online. Admins: /pair source and /pair target in the groups, or set SOURCE_CHAT_ID, TARGET_CHAT_ID, and CONFIGURED_BY_USER_ID. Check /status.",
-  es: "Threadifier está en línea. Administradores: /pair source y /pair target en los grupos, o define SOURCE_CHAT_ID, TARGET_CHAT_ID y CONFIGURED_BY_USER_ID. Consulta /status.",
-  ru: "Threadifier запущен. Администраторы: /pair source и /pair target в группах или задайте SOURCE_CHAT_ID, TARGET_CHAT_ID и CONFIGURED_BY_USER_ID. Проверьте /status.",
-  fr: "Threadifier est en ligne. Administrateurs : /pair source et /pair target dans les groupes, ou définissez SOURCE_CHAT_ID, TARGET_CHAT_ID et CONFIGURED_BY_USER_ID. Consultez /status.",
-};
+function welcomeText(): string {
+  return t`Threadifier is online. Admins: /pair source and /pair target in the groups, or set SOURCE_CHAT_ID, TARGET_CHAT_ID, and CONFIGURED_BY_USER_ID. Check /status.`;
+}
+
+function noPairsText(): string {
+  return t`No chat pairs configured. Run /pair source and /pair target inside the group chats to link.`;
+}
 
 function installApiRecorder(bot: Bot): OutgoingCall[] {
   const calls: OutgoingCall[] = [];
@@ -112,30 +115,31 @@ describe("command language", () => {
     await bot.handleUpdate(privateCommand(1, "/start", undefined));
     await bot.handleUpdate(privateCommand(2, "/start", "de"));
 
-    expect(calls.map((call) => call.payload.text)).toEqual([welcome.en, welcome.en]);
+    expect(calls.map((call) => call.payload.text)).toEqual([welcomeText(), welcomeText()]);
     expect(await getUserLocale(handle.db, 100)).toBe("en");
   });
 
   it("stores a shipped account language on /start, including region tags", async () => {
     await bot.handleUpdate(privateCommand(1, "/start", "ru"));
-    expect(calls[0]?.payload.text).toBe(welcome.ru);
+    expect(calls[0]?.payload.text).toBe(welcomeText());
     expect(await getUserLocale(handle.db, 100)).toBe("ru");
 
     calls.length = 0;
     await bot.handleUpdate(privateCommand(2, "/start", "es-MX", 200));
-    expect(calls[0]?.payload.text).toBe(welcome.es);
+    expect(calls[0]?.payload.text).toBe(welcomeText());
     expect(await getUserLocale(handle.db, 200)).toBe("es");
   });
 
   it("keeps a different language in each chat and falls back to the user", async () => {
     await bot.handleUpdate(privateCommand(1, "/language fr", "en"));
-    expect(calls.at(-1)?.payload.text).toContain("Français");
+    const languageName = localeEndonym("fr");
+    expect(calls.at(-1)?.payload.text).toBe(t`Language set to ${languageName}.`);
     expect(await getChatLocale(handle.db, 100)).toBe("fr");
     expect(await getUserLocale(handle.db, 100)).toBeNull();
 
     calls.length = 0;
     await bot.handleUpdate(privateCommand(2, "/pair", "en"));
-    expect(calls[0]?.payload.text).toContain("Aucune paire de chats configurée");
+    expect(calls[0]?.payload.text).toBe(noPairsText());
 
     calls.length = 0;
     await bot.handleUpdate(
@@ -146,7 +150,7 @@ describe("command language", () => {
 
     calls.length = 0;
     await bot.handleUpdate(privateCommand(4, "/start", "ru"));
-    expect(calls[0]?.payload.text).toBe(welcome.fr);
+    expect(calls[0]?.payload.text).toBe(welcomeText());
     expect(await getUserLocale(handle.db, 100)).toBe("ru");
     expect(await getChatLocale(handle.db, 100)).toBe("fr");
 
@@ -154,7 +158,10 @@ describe("command language", () => {
     await bot.handleUpdate(
       commandUpdate(5, "/status", "en", { id: -300, type: "group" }),
     );
-    expect(calls[0]?.payload.text).toContain("Этот чат не входит во включённую пару");
+    const enabled: unknown[] = [];
+    expect(calls[0]?.payload.text).toBe(
+      t`This chat is not in an enabled pair. Enabled pairs: ${enabled.length}.`,
+    );
   });
 
   it("shows the language picker and ignores an unknown code", async () => {
@@ -162,7 +169,8 @@ describe("command language", () => {
     const markup = calls[0]?.payload.reply_markup as {
       inline_keyboard: Array<Array<{ text: string; callback_data: string }>>;
     };
-    expect(calls[0]?.payload.text).toContain("Русский");
+    const languageName = localeEndonym("ru");
+    expect(calls[0]?.payload.text).toBe(t`Choose a language. Current: ${languageName}.`);
     expect(markup.inline_keyboard.flat().map((button) => button.callback_data)).toEqual([
       "lang:en",
       "lang:es",
@@ -173,7 +181,9 @@ describe("command language", () => {
 
     calls.length = 0;
     await bot.handleUpdate(privateCommand(2, "/language de", "ru"));
-    expect(calls[0]?.payload.text).toContain("недоступен");
+    expect(calls[0]?.payload.text).toBe(
+      t`That language is not available. Choose one of the buttons below.`,
+    );
     expect(await getChatLocale(handle.db, 100)).toBeNull();
     expect(await getUserLocale(handle.db, 100)).toBeNull();
   });
@@ -199,7 +209,8 @@ describe("command language", () => {
       "answerCallbackQuery",
       "editMessageText",
     ]);
-    expect(calls[1]?.payload.text).toContain("Español");
+    const languageName = localeEndonym("es");
+    expect(calls[1]?.payload.text).toBe(t`Language set to ${languageName}.`);
     expect(await getChatLocale(handle.db, 100)).toBe("es");
     expect(await getUserLocale(handle.db, 100)).toBeNull();
   });
@@ -227,7 +238,7 @@ describe("command menu", () => {
     const names = calls[0]?.commands.map((command) => command.command);
     expect(names).toEqual(["start", "language", "pair", "status", "unpair"]);
     expect(calls[0]?.commands.find((command) => command.command === "language")?.description).toBe(
-      "Choose language",
+      t`Choose language`,
     );
 
     const languageCodes = calls
@@ -248,7 +259,7 @@ describe("command menu", () => {
       (call) => call.other?.language_code === "ru" && call.other.scope == null,
     );
     expect(russian?.commands.find((command) => command.command === "language")?.description).toBe(
-      "Выбрать язык",
+      t`Choose language`,
     );
   });
 });

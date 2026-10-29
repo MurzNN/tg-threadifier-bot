@@ -1,6 +1,14 @@
 import { expect } from "vitest";
 
-import { telegramPrivatePathId } from "../../src/lib/links.js";
+import {
+  MESSAGE_TEXT_MAX,
+  appendAuthorSuffix,
+} from "../../src/bot/relocate/authorSuffix.js";
+import {
+  renderSourceNotice,
+  renderThreadHeader,
+} from "../../src/bot/relocate/templates.js";
+import { buildUserLink, telegramPrivatePathId } from "../../src/lib/links.js";
 import type { ApiCall } from "./botApiStub.js";
 import { SOURCE_CHAT_ID, TARGET_CHAT_ID } from "./flowA.js";
 
@@ -29,8 +37,16 @@ export function assertHappyRelocate(
   const sourceLink = `https://t.me/c/${telegramPrivatePathId(SOURCE_CHAT_ID)}/${options.rootMessageId ?? 10}`;
   const userId = options.userId ?? 9;
   const author = options.author ?? "Ada Lovelace";
+  const linkToUser = buildUserLink(userId);
   expect(edits[0]?.payload.text).toBe(
-    `Thread: ${options.title}\nInitiated by the user <a href="tg://user?id=${userId}">${author}</a> in the chat <a href="${sourceLink}">Main</a>.\n<a href="${link}">Thread link</a>.`,
+    renderThreadHeader({
+      threadTitle: options.title,
+      linkToUser,
+      userDisplayName: author,
+      linkToSourceChat: sourceLink,
+      sourceChatName: "Main",
+      threadLink: link,
+    }),
   );
   expect(edits[0]?.payload).toMatchObject({
     chat_id: TARGET_CHAT_ID,
@@ -55,7 +71,15 @@ export function assertHappyRelocate(
     .slice(1);
   const replies = options.replies ?? [];
   expect(replyEdits.map((call) => call.payload.text)).toEqual(
-    replies.map((reply) => `${reply.body}\n\n— ${reply.author}`),
+    replies.map(
+      (reply) =>
+        appendAuthorSuffix({
+          body: reply.body,
+          authorName: reply.author,
+          userId: reply.userId,
+          maxLength: MESSAGE_TEXT_MAX,
+        }).text,
+    ),
   );
   for (const [index, reply] of replies.entries()) {
     const entities = replyEdits[index]?.payload.entities as
@@ -80,7 +104,13 @@ export function assertHappyRelocate(
     parse_mode: "HTML",
   });
   expect(notice?.payload.text).toBe(
-    `The message "${options.title}" from <a href="tg://user?id=${userId}">${author}</a> with responses forwarded to the chat <a href="${link}">Helper</a>. Please continue the conversation there.`,
+    renderSourceNotice({
+      topicLabel: options.title,
+      linkToUser,
+      userDisplayName: author,
+      linkToTargetChatThread: link,
+      targetChatName: "Helper",
+    }),
   );
   return headerId as number;
 }

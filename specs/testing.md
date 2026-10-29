@@ -44,11 +44,11 @@ scripts/
 - Pass `botInfo` so grammY skips live `getMe`.
 - Install an API transformer that records `{ method, payload }` and returns synthetic `{ ok: true, result }`.
 - Feed updates via `bot.handleUpdate(...)`.
-- Assert call sequences (e.g. `sendMessage` → `forwardMessage` → `deleteMessage`) and Lingui/`en` substrings.
+- Assert call sequences (e.g. `sendMessage` → `forwardMessage` → `deleteMessage`) and the Lingui message. `tests/setup.ts` activates the `pseudo` locale, so the expected text comes from `t` or a render helper rather than a pasted translation.
 
-M0 sample: `tests/unit/start.test.ts` records `sendMessage` for `/start` against the English Lingui default. `tests/unit/language.test.ts` covers account language on `/start` (`ru`, `es-MX`, unknown → `en`), `/language` stored per chat, and the command menu.
+M0 sample: `tests/unit/start.test.ts` records `sendMessage` for `/start` against the welcome message. `tests/unit/language.test.ts` covers account language on `/start` (`ru`, `es-MX`, unknown → `en`), `/language` stored per chat, and the command menu.
 
-Command handlers: `tests/unit/pair.test.ts`. It uses in-memory PGlite from `createTestDb()` (`tests/helpers/db.ts`), `createBot` with `botInfo` set, an API transformer that records outgoing calls, and `bot.handleUpdate` for group and private updates. Assert `sendMessage` text with `expect.stringContaining` on stable English fragments. Cover enabling a pair while another enabled row already owns the same target (siblings must soft-disable). Cover a second user pairing the same source and target (the reply is an error and the row stays) and `/unpair` deleting only the caller's rows. For a slash-command change, run that file before `nub run test`.
+Command handlers: `tests/unit/pair.test.ts`. It uses in-memory PGlite from `createTestDb()` (`tests/helpers/db.ts`), `createBot` with `botInfo` set, an API transformer that records outgoing calls, and `bot.handleUpdate` for group and private updates. Assert `sendMessage` text with the same `t` template the command uses. Cover enabling a pair while another enabled row already owns the same target (siblings must soft-disable). Cover a second user pairing the same source and target (the reply is an error and the row stays) and `/unpair` deleting only the caller's rows. For a slash-command change, run that file before `nub run test`.
 
 Flow A relocate (`tests/unit/relocate.test.ts`) also covers a legacy two-enabled-pairs-on-one-target case: preferred lookup misses, fallback pair matches, job completes. Chat migration (`tests/unit/chatMigration.test.ts`) covers remap collisions that would duplicate `(source, target)`.
 

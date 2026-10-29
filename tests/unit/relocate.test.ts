@@ -2,6 +2,11 @@ import type { ApiCallFn, Bot } from "grammy";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { createBot, flushRelocate, stopRelocate } from "../../src/bot.js";
+import {
+  renderMatchFailure,
+  renderRelocateAborted,
+  resolveRootTitles,
+} from "../../src/bot/relocate/templates.js";
 import { setChatLocale } from "../../src/db/chatSettings.js";
 import type { DbHandle } from "../../src/db/client.js";
 import { findMessage } from "../../src/db/messages.js";
@@ -11,6 +16,7 @@ import {
 } from "../../src/db/relocation.js";
 import { chatPairs } from "../../src/db/schema.js";
 import { createLogger } from "../../src/logger.js";
+import { THREAD_TITLE_MAX, truncateText } from "../../src/lib/truncate.js";
 import type { ApiCall } from "../helpers/botApiStub.js";
 import { testBotInfo } from "../helpers/botInfo.js";
 import { assertHappyRelocate, methodsOf } from "../helpers/expectFlowA.js";
@@ -164,7 +170,7 @@ describe("Flow A relocate (API transformer)", () => {
     await flushRelocate(bot);
 
     expect(methodsOf(calls)).toEqual(["sendMessage"]);
-    expect(calls[0]?.payload.text).toContain("nothing was deleted");
+    expect(calls[0]?.payload.text).toBe(renderMatchFailure());
     expect(calls.some((call) => call.method === "deleteMessages")).toBe(false);
     const jobs = await listRelocationJobs(handle.db);
     expect(jobs).toHaveLength(1);
@@ -215,7 +221,7 @@ describe("Flow A relocate (API transformer)", () => {
         payload: { chat_id: TARGET_CHAT_ID, message_ids: [201, 202] },
       }),
     ]);
-    expect(calls.at(-1)?.payload.text).toContain("stopped at populated");
+    expect(calls.at(-1)?.payload.text).toBe(renderRelocateAborted("populated"));
     const jobs = await listRelocationJobs(handle.db);
     expect(jobs[0]).toMatchObject({
       phase: "aborted",
@@ -230,7 +236,7 @@ describe("Flow A relocate (API transformer)", () => {
     };
     await deliverCluster(bot, [nasty]);
     const headerId = assertHappyRelocate(calls, {
-      title: "Hello &lt;b&gt; &amp; &quot;x&quot;",
+      title: `Hello <b> & "x"`,
       copyMessageIds: [],
       sourceMessageIds: [nasty.messageId],
       triggerMessageIds: [201],
@@ -248,20 +254,20 @@ describe("Flow A relocate (API transformer)", () => {
     await setChatLocale(handle.db, SOURCE_CHAT_ID, "es");
     await deliverCluster(bot, [ROOT]);
 
-    const header = calls.find((call) => call.method === "editMessageText");
-    expect(String(header?.payload.text)).toContain("Тред:");
-    expect(String(header?.payload.text)).toContain("Ссылка на тред");
-    const notice = calls.filter((call) => call.method === "sendMessage").at(-1);
-    expect(String(notice?.payload.text)).toContain("Continúa la conversación allí.");
-    expect(notice?.payload.chat_id).toBe(SOURCE_CHAT_ID);
-    expect(header?.payload.chat_id).toBe(TARGET_CHAT_ID);
+    assertHappyRelocate(calls, {
+      title: ROOT.text!,
+      copyMessageIds: [],
+      sourceMessageIds: [ROOT.messageId],
+      triggerMessageIds: [201],
+    });
   });
 
   it("uses the media fallback when the root has no text", async () => {
     const media: Original = { ...ROOT, text: null };
+    const title = resolveRootTitles(null, null).threadTitle;
     await deliverCluster(bot, [media]);
     assertHappyRelocate(calls, {
-      title: "Media message",
+      title,
       copyMessageIds: [],
       sourceMessageIds: [media.messageId],
       triggerMessageIds: [201],
@@ -270,12 +276,15 @@ describe("Flow A relocate (API transformer)", () => {
 
   it("truncates a long root into the header title", async () => {
     const long = "a".repeat(200);
+    const title = truncateText(long, THREAD_TITLE_MAX);
     await deliverCluster(bot, [{ ...ROOT, text: long }]);
-    const edit = calls.find((call) => call.method === "editMessageText");
-    const text = String(edit?.payload.text);
-    expect(text.startsWith("Thread: ")).toBe(true);
-    const title = text.slice("Thread: ".length).split("\n")[0] ?? "";
-    expect(title.length).toBeLessThanOrEqual(120);
+    assertHappyRelocate(calls, {
+      title,
+      copyMessageIds: [],
+      sourceMessageIds: [ROOT.messageId],
+      triggerMessageIds: [201],
+    });
+    expect(title.length).toBeLessThanOrEqual(THREAD_TITLE_MAX);
     expect(title.endsWith("…")).toBe(true);
     const threads = await listThreads(handle.db);
     expect(threads[0]?.threadTitle).toBe(title);

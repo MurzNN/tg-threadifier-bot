@@ -1,0 +1,222 @@
+msgid ""
+msgstr ""
+"POT-Creation-Date: 2026-10-29 13:20+0400\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"X-Generator: @lingui/cli\n"
+"Language: pseudo\n"
+
+#: src/bot/relocate/templates.ts
+msgid "— {authorName}"
+msgstr ""
+
+#. placeholder {0}: pair.id
+#: src/bot/commands/pair.ts
+msgid "#{0} (disabled): {source} → {target}"
+msgstr ""
+
+#. placeholder {0}: pair.id
+#: src/bot/commands/pair.ts
+msgid "#{0} (enabled): {source} → {target}"
+msgstr ""
+
+#. Reply to /language. {languageName} is the current bot language's own name, such as English or Français.
+#: src/bot/commands/language.ts
+msgid "Choose a language. Current: {languageName}."
+msgstr ""
+
+#. Telegram command menu description for /language. Opens the bot language picker.
+#: src/bot/commands/menu.ts
+msgid "Choose language"
+msgstr ""
+
+#. placeholder {0}: lines.join("\n")
+#: src/bot/commands/pair.ts
+msgid "Configured pairs:\n"
+"{0}"
+msgstr ""
+
+#: src/bot/relocate/templates.ts
+msgid "Could not finish relocating this discussion (stopped at {phase}). No further messages were deleted."
+msgstr ""
+
+#: src/bot/relocate/templates.ts
+msgid "Could not match these forwards to stored source messages, so nothing was deleted. The bot only relocates messages it has already seen."
+msgstr ""
+
+#. Telegram command menu description for /unpair. Deletes the caller's chat pairs that include this chat.
+#: src/bot/commands/menu.ts
+msgid "Delete the chat pair"
+msgstr ""
+
+#: src/bot/commands/pair.ts
+msgid "Deleted {deleted} chat pair(s) involving this chat."
+msgstr ""
+
+#. placeholder {0}: lines.join("\n")
+#: src/bot/commands/pair.ts
+msgid "Enabled pairs:\n"
+"{0}"
+msgstr ""
+
+#. Confirmation after the user picks a bot language. {languageName} is that language's own name, such as Español.
+#: src/bot/commands/language.ts
+msgid "Language set to {languageName}."
+msgstr ""
+
+#. Telegram command menu description for /pair. Links a source chat and a target chat.
+#: src/bot/commands/menu.ts
+msgid "Link source and target chats"
+msgstr ""
+
+#: src/bot/relocate/templates.ts
+msgid "Media message"
+msgstr ""
+
+#: src/bot/commands/pair.ts
+msgid "No chat pair includes this chat."
+msgstr ""
+
+#: src/bot/commands/pair.ts
+msgid "No chat pairs configured. Run /pair source and /pair target inside the group chats to link."
+msgstr ""
+
+#: src/bot/commands/pair.ts
+msgid "No enabled chat pairs. Use /pair source and /pair target, or set SOURCE_CHAT_ID, TARGET_CHAT_ID, and CONFIGURED_BY_USER_ID."
+msgstr ""
+
+#: src/bot/commands/pair.ts
+msgid "Only chat admins can configure pairs."
+msgstr ""
+
+#. placeholder {0}: pair.sourceChatId
+#. placeholder {1}: pair.targetChatId
+#: src/bot/commands/pair.ts
+msgid "Pair enabled: source {0} → target {1}. Ingest is active for both chats."
+msgstr ""
+
+#: src/bot/commands/pair.ts
+msgid "Run /pair source or /pair target inside the group chats to link."
+msgstr ""
+
+#: src/bot/commands/pair.ts
+msgid "Run /unpair inside a linked source or target chat."
+msgstr ""
+
+#. Telegram command menu description for /status
+#: src/bot/commands/menu.ts
+msgid "Show the enabled chat pair"
+msgstr ""
+
+#. Telegram command menu description for /start
+#: src/bot/commands/menu.ts
+msgid "Show the welcome message"
+msgstr ""
+
+#: src/bot/commands/pair.ts
+msgid "Source and target must be different chats. Use /pair again in each chat."
+msgstr ""
+
+#: src/bot/relocate/templates.ts
+msgid "source chat"
+msgstr ""
+
+#. placeholder {0}: ctx.chat.id
+#: src/bot/commands/pair.ts
+msgid "Source chat recorded ({0}). Now run /pair target in the helper chat."
+msgstr ""
+
+#: src/bot/relocate/templates.ts
+msgid "target chat"
+msgstr ""
+
+#. placeholder {0}: ctx.chat.id
+#: src/bot/commands/pair.ts
+msgid "Target chat recorded ({0}). Now run /pair source in the main chat."
+msgstr ""
+
+#: src/bot/commands/language.ts
+msgid "That language is not available. Choose one of the buttons below."
+msgstr ""
+
+#: src/bot/relocate/templates.ts
+msgid "The message \"{topicLabel}\" from <a href=\"{linkToUser}\">{userDisplayName}</a> with responses forwarded to the chat <a href=\"{linkToTargetChatThread}\">{targetChatName}</a>. Please continue the conversation there."
+msgstr ""
+
+#. placeholder {0}: pairs.length
+#. placeholder {1}: blocks.join("\n\n")
+#: src/bot/commands/pair.ts
+msgid "This chat is in {0} pairs:\n"
+"{1}"
+msgstr ""
+
+#. placeholder {0}: enabled.length
+#: src/bot/commands/pair.ts
+msgid "This chat is not in an enabled pair. Enabled pairs: {0}."
+msgstr ""
+
+#: src/bot/commands/pair.ts
+msgid "This chat is not paired. Admins can run /pair source or /pair target here."
+msgstr ""
+
+#. placeholder {0}: here.id
+#. placeholder {1}: here.sourceChatId
+#. placeholder {2}: here.targetChatId
+#: src/bot/commands/pair.ts
+msgid "This chat is the {role} in pair #{0}: {1} → {2}."
+msgstr ""
+
+#. placeholder {0}: pair.id
+#: src/bot/commands/pair.ts
+msgid "This chat is the source in pair #{0} (disabled).\n"
+"Source: {source}\n"
+"Target: {target}"
+msgstr ""
+
+#. placeholder {0}: pair.id
+#: src/bot/commands/pair.ts
+msgid "This chat is the source in pair #{0} (enabled).\n"
+"Source: {source}\n"
+"Target: {target}"
+msgstr ""
+
+#. placeholder {0}: pair.id
+#: src/bot/commands/pair.ts
+msgid "This chat is the target in pair #{0} (disabled).\n"
+"Source: {source}\n"
+"Target: {target}"
+msgstr ""
+
+#. placeholder {0}: pair.id
+#: src/bot/commands/pair.ts
+msgid "This chat is the target in pair #{0} (enabled).\n"
+"Source: {source}\n"
+"Target: {target}"
+msgstr ""
+
+#: src/bot/commands/pair.ts
+msgid "This pair was configured by another user."
+msgstr ""
+
+#: src/bot/commands/pair.ts
+msgid "This source and target are already paired by another user."
+msgstr ""
+
+#: src/bot/relocate/templates.ts
+msgid "Thread: {threadTitle}\n"
+"Initiated by the user <a href=\"{linkToUser}\">{userDisplayName}</a> in the chat <a href=\"{linkToSourceChat}\">{sourceChatName}</a>.\n"
+"<a href=\"{threadLink}\">Thread link</a>."
+msgstr ""
+
+#: src/bot.ts
+msgid "Threadifier is online. Admins: /pair source and /pair target in the groups, or set SOURCE_CHAT_ID, TARGET_CHAT_ID, and CONFIGURED_BY_USER_ID. Check /status."
+msgstr ""
+
+#: src/bot/commands/pair.ts
+msgid "Usage: /pair source or /pair target (run inside the group). /pair alone shows pairing status."
+msgstr ""
+
+#: src/bot/relocate/templates.ts
+msgid "user"
+msgstr ""

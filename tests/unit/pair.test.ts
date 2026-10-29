@@ -1,9 +1,15 @@
+import { t } from "@lingui/core/macro";
 import type { ApiCallFn, Bot } from "grammy";
 import type { ChatMember, UserFromGetMe } from "grammy/types";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { createBot } from "../../src/bot.js";
-import { listChatPairs, listEnabledPairs } from "../../src/db/chatPairs.js";
+import {
+  listChatPairs,
+  listChatPairsForUser,
+  listEnabledPairs,
+  listPairsForChat,
+} from "../../src/db/chatPairs.js";
 import type { DbHandle } from "../../src/db/client.js";
 import { createLogger } from "../../src/logger.js";
 import { createTestDb } from "../helpers/db.js";
@@ -50,6 +56,11 @@ const adminMember = {
   can_pin_messages: true,
   can_manage_topics: true,
 } as ChatMember;
+
+function chatLabel(title: string | null, chatId: number): string {
+  const name = title?.replace(/\s+/g, " ").trim();
+  return name ? `${name} (${chatId})` : String(chatId);
+}
 
 function installApiRecorder(bot: Bot): OutgoingCall[] {
   const calls: OutgoingCall[] = [];
@@ -137,9 +148,10 @@ describe("pair commands", () => {
     });
 
     const replies = calls.filter((c) => c.method === "sendMessage");
-    expect(replies.at(-1)?.payload).toMatchObject({
-      text: expect.stringContaining("Pair enabled"),
-    });
+    const pair = pairs[0]!;
+    expect(replies.at(-1)?.payload.text).toBe(
+      t`Pair enabled: source ${pair.sourceChatId} → target ${pair.targetChatId}. Ingest is active for both chats.`,
+    );
   });
 
   it("enabling a pair disables other enabled pairs for the same target", async () => {
@@ -167,17 +179,20 @@ describe("pair commands", () => {
     calls.length = 0;
 
     await bot.handleUpdate(groupCommand(3, -1001, "/status", "Main"));
+    const here = (await listEnabledPairs(handle.db))[0]!;
+    const role = "source";
     const reply = calls.find((c) => c.method === "sendMessage");
-    expect(reply?.payload).toMatchObject({
-      text: expect.stringContaining("source"),
-    });
+    expect(reply?.payload.text).toBe(
+      t`This chat is the ${role} in pair #${here.id}: ${here.sourceChatId} → ${here.targetChatId}.`,
+    );
   });
 
   it("/pair with no arguments lists the caller's configured pairs in a private chat", async () => {
+    const noPairs = t`No chat pairs configured. Run /pair source and /pair target inside the group chats to link.`;
     await bot.handleUpdate(privateCommand(1, "/pair"));
     expect(calls.find((c) => c.method === "sendMessage")?.payload).toMatchObject({
       chat_id: 7,
-      text: expect.stringContaining("No chat pairs configured"),
+      text: noPairs,
     });
 
     await bot.handleUpdate(groupCommand(2, -1001, "/pair source", "Main"));
@@ -187,26 +202,30 @@ describe("pair commands", () => {
     calls.length = 0;
 
     await bot.handleUpdate(privateCommand(6, "/pair"));
-    const text = String(
-      calls.find((c) => c.method === "sendMessage")?.payload.text,
+    const pairs = await listChatPairsForUser(handle.db, 7);
+    const lines = pairs.map((pair) => {
+      const source = chatLabel(pair.sourceTitle, pair.sourceChatId);
+      const target = chatLabel(pair.targetTitle, pair.targetChatId);
+      return t`#${pair.id} (enabled): ${source} → ${target}`;
+    });
+    expect(calls.find((c) => c.method === "sendMessage")?.payload.text).toBe(
+      t`Configured pairs:\n${lines.join("\n")}`,
     );
-    expect(text).toContain("Configured pairs:");
-    expect(text).toContain("(enabled): Main (-1001) → Helper (-1002)");
-    expect(text).toContain("(enabled): Other (-1003) → Side (-1004)");
 
     calls.length = 0;
     await bot.handleUpdate(privateCommand(7, "/pair", 8));
     expect(calls.find((c) => c.method === "sendMessage")?.payload).toMatchObject({
       chat_id: 8,
-      text: expect.stringContaining("No chat pairs configured"),
+      text: noPairs,
     });
   });
 
   it("/pair with no arguments reports this chat's pairing in a group", async () => {
+    const notPaired = t`This chat is not paired. Admins can run /pair source or /pair target here.`;
     await bot.handleUpdate(groupCommand(1, -1001, "/pair", "Main"));
     expect(calls.find((c) => c.method === "sendMessage")?.payload).toMatchObject({
       chat_id: -1001,
-      text: expect.stringContaining("not paired"),
+      text: notPaired,
     });
 
     await bot.handleUpdate(groupCommand(2, -1001, "/pair source", "Main"));
@@ -214,13 +233,12 @@ describe("pair commands", () => {
     calls.length = 0;
 
     await bot.handleUpdate(groupCommand(4, -1002, "/pair", "Helper"));
-    const text = String(
-      calls.find((c) => c.method === "sendMessage")?.payload.text,
+    const pair = (await listPairsForChat(handle.db, -1002))[0]!;
+    const source = chatLabel(pair.sourceTitle, pair.sourceChatId);
+    const target = chatLabel(pair.targetTitle, pair.targetChatId);
+    expect(calls.find((c) => c.method === "sendMessage")?.payload.text).toBe(
+      t`This chat is the target in pair #${pair.id} (enabled).\nSource: ${source}\nTarget: ${target}`,
     );
-    expect(text).toContain("This chat is the target in pair #");
-    expect(text).toContain("(enabled)");
-    expect(text).toContain("Source: Main (-1001)");
-    expect(text).toContain("Target: Helper (-1002)");
     expect(calls.some((c) => c.method === "getChatMember")).toBe(false);
   });
 
@@ -232,13 +250,15 @@ describe("pair commands", () => {
     calls.length = 0;
 
     await bot.handleUpdate(groupCommand(5, -1001, "/pair", "Main"));
-    const text = String(
-      calls.find((c) => c.method === "sendMessage")?.payload.text,
+    const pairs = await listPairsForChat(handle.db, -1001);
+    const blocks = pairs.map((pair) => {
+      const source = chatLabel(pair.sourceTitle, pair.sourceChatId);
+      const target = chatLabel(pair.targetTitle, pair.targetChatId);
+      return t`This chat is the source in pair #${pair.id} (enabled).\nSource: ${source}\nTarget: ${target}`;
+    });
+    expect(calls.find((c) => c.method === "sendMessage")?.payload.text).toBe(
+      t`This chat is in ${pairs.length} pairs:\n${blocks.join("\n\n")}`,
     );
-    expect(text).toContain("This chat is in 2 pairs:");
-    expect(text).toContain("Helper (-1002)");
-    expect(text).toContain("Side (-1004)");
-    expect(text).not.toContain("not paired");
   });
 
   it("/unpair deletes the caller's pairs for the chat", async () => {
@@ -247,15 +267,16 @@ describe("pair commands", () => {
     await bot.handleUpdate(groupCommand(3, -1001, "/unpair", "Main"));
 
     expect(await listChatPairs(handle.db)).toHaveLength(0);
-    expect(calls.at(-1)?.payload).toMatchObject({
-      text: expect.stringContaining("Deleted 1 chat pair"),
-    });
+    const deleted = 1;
+    expect(calls.at(-1)?.payload.text).toBe(
+      t`Deleted ${deleted} chat pair(s) involving this chat.`,
+    );
 
     calls.length = 0;
     await bot.handleUpdate(groupCommand(4, -1001, "/pair", "Main"));
-    expect(calls.find((c) => c.method === "sendMessage")?.payload).toMatchObject({
-      text: expect.stringContaining("not paired"),
-    });
+    expect(calls.find((c) => c.method === "sendMessage")?.payload.text).toBe(
+      t`This chat is not paired. Admins can run /pair source or /pair target here.`,
+    );
   });
 
   it("refuses the same source and target when another user already owns the pair", async () => {
@@ -264,9 +285,9 @@ describe("pair commands", () => {
     await bot.handleUpdate(groupCommand(3, -1001, "/pair source", "Main", 8));
     await bot.handleUpdate(groupCommand(4, -1002, "/pair target", "Helper", 8));
 
-    expect(calls.at(-1)?.payload).toMatchObject({
-      text: expect.stringContaining("already paired by another user"),
-    });
+    expect(calls.at(-1)?.payload.text).toBe(
+      t`This source and target are already paired by another user.`,
+    );
     const pairs = await listChatPairs(handle.db);
     expect(pairs).toHaveLength(1);
     expect(pairs[0]).toMatchObject({
@@ -278,9 +299,9 @@ describe("pair commands", () => {
 
     calls.length = 0;
     await bot.handleUpdate(groupCommand(5, -1001, "/unpair", "Main", 8));
-    expect(calls.at(-1)?.payload).toMatchObject({
-      text: expect.stringContaining("configured by another user"),
-    });
+    expect(calls.at(-1)?.payload.text).toBe(
+      t`This pair was configured by another user.`,
+    );
     expect(await listEnabledPairs(handle.db)).toHaveLength(1);
   });
 });
