@@ -1,0 +1,188 @@
+msgid ""
+msgstr ""
+"POT-Creation-Date: 2026-10-29 09:37+0400\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"X-Generator: @lingui/cli\n"
+"Language: fr\n"
+
+#: src/bot/relocate/templates.ts
+msgid "— {authorName}"
+msgstr "— {authorName}"
+
+#. placeholder {0}: pair.id
+#: src/bot/commands/pair.ts
+msgid "#{0} (disabled): {source} → {target}"
+msgstr "#{0} (désactivé) : {source} → {target}"
+
+#. placeholder {0}: pair.id
+#: src/bot/commands/pair.ts
+msgid "#{0} (enabled): {source} → {target}"
+msgstr "#{0} (activé) : {source} → {target}"
+
+#. placeholder {0}: lines.join("\n")
+#: src/bot/commands/pair.ts
+msgid "Configured pairs:\n"
+"{0}"
+msgstr "Paires configurées :\n"
+"{0}"
+
+#: src/bot/relocate/templates.ts
+msgid "Could not finish relocating this discussion (stopped at {phase}). No further messages were deleted."
+msgstr "Impossible de terminer le déplacement de cette discussion (arrêt à l'étape {phase}). Aucun autre message n'a été supprimé."
+
+#: src/bot/relocate/templates.ts
+msgid "Could not match these forwards to stored source messages, so nothing was deleted. The bot only relocates messages it has already seen."
+msgstr "Impossible d'associer ces transferts aux messages source enregistrés, donc rien n'a été supprimé. Le bot ne déplace que les messages qu'il a déjà vus."
+
+#: src/bot/commands/pair.ts
+msgid "Disabled {n} chat pair(s) involving this chat."
+msgstr "{n} paire(s) de chats incluant ce chat ont été désactivées."
+
+#. placeholder {0}: lines.join("\n")
+#: src/bot/commands/pair.ts
+msgid "Enabled pairs:\n"
+"{0}"
+msgstr "Paires activées :\n"
+"{0}"
+
+#: src/bot/relocate/templates.ts
+msgid "Media message"
+msgstr "Message multimédia"
+
+#: src/bot/commands/pair.ts
+msgid "No chat pairs configured. Run /pair source and /pair target inside the group chats to link."
+msgstr "Aucune paire de chats configurée. Exécutez /pair source et /pair target dans les chats de groupe pour les lier."
+
+#: src/bot/commands/pair.ts
+msgid "No enabled chat pairs. Use /pair source and /pair target, or set SOURCE_CHAT_ID and TARGET_CHAT_ID."
+msgstr "Aucune paire de chats activée. Utilisez /pair source et /pair target, ou définissez SOURCE_CHAT_ID et TARGET_CHAT_ID."
+
+#: src/bot/commands/pair.ts
+msgid "No enabled pair includes this chat."
+msgstr "Aucune paire activée n'inclut ce chat."
+
+#: src/bot/commands/pair.ts
+msgid "Only chat admins can configure pairs."
+msgstr "Seuls les administrateurs du chat peuvent configurer les paires."
+
+#. placeholder {0}: pair.sourceChatId
+#. placeholder {1}: pair.targetChatId
+#: src/bot/commands/pair.ts
+msgid "Pair enabled: source {0} → target {1}. Ingest is active for both chats."
+msgstr "Paire activée : origine {0} → cible {1}. L'enregistrement des messages est actif dans les deux chats."
+
+#: src/bot/commands/pair.ts
+msgid "Run /pair source or /pair target inside the group chats to link."
+msgstr "Exécutez /pair source ou /pair target dans les chats de groupe pour les lier."
+
+#: src/bot/commands/pair.ts
+msgid "Run /unpair inside a linked source or target chat."
+msgstr "Exécutez /unpair dans un chat source ou cible déjà lié."
+
+#: src/bot/commands/pair.ts
+msgid "Source and target must be different chats. Use /pair again in each chat."
+msgstr "La source et la cible doivent être des chats différents. Relancez /pair dans chaque chat."
+
+#: src/bot/relocate/templates.ts
+msgid "source chat"
+msgstr "chat source"
+
+#. placeholder {0}: ctx.chat.id
+#: src/bot/commands/pair.ts
+msgid "Source chat recorded ({0}). Now run /pair target in the helper chat."
+msgstr "Chat source enregistré ({0}). Exécutez maintenant /pair target dans le chat d'aide."
+
+#: src/bot/relocate/templates.ts
+msgid "target chat"
+msgstr "chat cible"
+
+#. placeholder {0}: ctx.chat.id
+#: src/bot/commands/pair.ts
+msgid "Target chat recorded ({0}). Now run /pair source in the main chat."
+msgstr "Chat cible enregistré ({0}). Exécutez maintenant /pair source dans le chat principal."
+
+#: src/bot/relocate/templates.ts
+msgid "The message \"{topicLabel}\" from <a href=\"{linkToUser}\">{userDisplayName}</a> with responses forwarded to the chat <a href=\"{linkToTargetChatThread}\">{targetChatName}</a>. Please continue the conversation there."
+msgstr "Le message « {topicLabel} » de <a href=\"{linkToUser}\">{userDisplayName}</a>, avec les réponses, a été transféré vers le chat <a href=\"{linkToTargetChatThread}\">{targetChatName}</a>. Poursuivez la conversation là-bas."
+
+#. placeholder {0}: pairs.length
+#. placeholder {1}: blocks.join("\n\n")
+#: src/bot/commands/pair.ts
+msgid "This chat is in {0} pairs:\n"
+"{1}"
+msgstr "Ce chat figure dans {0} paires :\n"
+"{1}"
+
+#. placeholder {0}: pairs.length
+#: src/bot/commands/pair.ts
+msgid "This chat is not in an enabled pair. Enabled pairs: {0}."
+msgstr "Ce chat ne fait pas partie d'une paire activée. Paires activées : {0}."
+
+#: src/bot/commands/pair.ts
+msgid "This chat is not paired. Admins can run /pair source or /pair target here."
+msgstr "Ce chat n'est pas apparié. Les administrateurs peuvent exécuter /pair source ou /pair target ici."
+
+#. placeholder {0}: here.id
+#. placeholder {1}: here.sourceChatId
+#. placeholder {2}: here.targetChatId
+#: src/bot/commands/pair.ts
+msgid "This chat is the {role} in pair #{0}: {1} → {2}."
+msgstr "Ce chat a le rôle {role} dans la paire #{0} : {1} → {2}."
+
+#. placeholder {0}: pair.id
+#: src/bot/commands/pair.ts
+msgid "This chat is the source in pair #{0} (disabled).\n"
+"Source: {source}\n"
+"Target: {target}"
+msgstr "Ce chat est la source dans la paire #{0} (désactivée).\n"
+"Source : {source}\n"
+"Cible : {target}"
+
+#. placeholder {0}: pair.id
+#: src/bot/commands/pair.ts
+msgid "This chat is the source in pair #{0} (enabled).\n"
+"Source: {source}\n"
+"Target: {target}"
+msgstr "Ce chat est la source dans la paire #{0} (activée).\n"
+"Source : {source}\n"
+"Cible : {target}"
+
+#. placeholder {0}: pair.id
+#: src/bot/commands/pair.ts
+msgid "This chat is the target in pair #{0} (disabled).\n"
+"Source: {source}\n"
+"Target: {target}"
+msgstr "Ce chat est la cible dans la paire #{0} (désactivée).\n"
+"Source : {source}\n"
+"Cible : {target}"
+
+#. placeholder {0}: pair.id
+#: src/bot/commands/pair.ts
+msgid "This chat is the target in pair #{0} (enabled).\n"
+"Source: {source}\n"
+"Target: {target}"
+msgstr "Ce chat est la cible dans la paire #{0} (activée).\n"
+"Source : {source}\n"
+"Cible : {target}"
+
+#: src/bot/relocate/templates.ts
+msgid "Thread: {threadTitle}\n"
+"Initiated by the user <a href=\"{linkToUser}\">{userDisplayName}</a> in the chat <a href=\"{linkToSourceChat}\">{sourceChatName}</a>.\n"
+"<a href=\"{threadLink}\">Thread link</a>."
+msgstr "Fil : {threadTitle}\n"
+"Lancé par l'utilisateur <a href=\"{linkToUser}\">{userDisplayName}</a> dans le chat <a href=\"{linkToSourceChat}\">{sourceChatName}</a>.\n"
+"<a href=\"{threadLink}\">Lien du fil</a>."
+
+#: src/bot.ts
+msgid "Threadifier is online. Admins: /pair source and /pair target in the groups, or set SOURCE_CHAT_ID and TARGET_CHAT_ID. Check /status."
+msgstr "Threadifier est en ligne. Administrateurs : /pair source et /pair target dans les groupes, ou définissez SOURCE_CHAT_ID et TARGET_CHAT_ID. Consultez /status."
+
+#: src/bot/commands/pair.ts
+msgid "Usage: /pair source or /pair target (run inside the group). /pair alone shows pairing status."
+msgstr "Utilisation : /pair source ou /pair target (à lancer dans le groupe). /pair seul affiche l'état de l'appariement."
+
+#: src/bot/relocate/templates.ts
+msgid "user"
+msgstr "utilisateur"

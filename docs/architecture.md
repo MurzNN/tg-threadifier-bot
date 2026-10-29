@@ -83,7 +83,7 @@ One TypeScript `pg-core` schema and one Drizzle Kit migration tree. Engine selec
 | Bot message templates | Thread header, source redirect notice, Flow B prompt, button labels, errors, `/start` |
 | Mini App UI | Labels, buttons, help text, validation errors, template editor |
 
-Defaults ship as **Lingui** catalogs (English first; more locales later). Placeholders use **single braces** and **camelCase**: `{threadTitle}` — see [workflows.md](workflows.md#naming--template-placeholders).
+Defaults ship as **Lingui** catalogs (`en`, `es`, `fr`, `ru`). Placeholders use **single braces** and **camelCase**: `{threadTitle}` — see [workflows.md](workflows.md#naming--template-placeholders).
 
 ### Operator overrides (configurable templates)
 
@@ -109,7 +109,7 @@ Store overrides in the DB (e.g. `message_template_overrides`: `chat_pair_id`, `t
 
 ### Tooling
 
-- User-facing defaults use the `t` macro from `@lingui/core/macro`. After adding or changing a `t` string, run `nub run i18n:extract` (rewrites `src/locales/en/messages.po`). `@lingui/vite-plugin` compiles those `.po` catalogs when they are imported (`src/i18n.ts`); there is no `lingui compile` step and no generated `messages.ts`.
+- User-facing defaults use the `t` macro from `@lingui/core/macro`. After adding or changing a `t` string, run `nub run i18n:extract` (rewrites `src/locales/{locale}/messages.po` for `en`, `es`, `fr`, and `ru`). `@lingui/vite-plugin` compiles those `.po` catalogs when they are imported (`src/i18n.ts`); there is no `lingui compile` step and no generated `messages.ts`.
 - `tests/setup.ts` calls `setupI18n()`. Unit tests assert English substrings of the rendered reply.
 - Unit-test critical messages with a fixed locale to lock placeholder wiring (links, truncation labels).
 - Unit/integration tests for override resolution (override wins; missing override falls back; invalid placeholder rejected on save).

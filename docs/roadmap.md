@@ -115,7 +115,8 @@ Moved earlier so Flow A/B work can be exercised on a real cluster / Test DC with
 - [ ] Multiple target chats / topic-specific helpers per source
 - [ ] Multi-tenant hosting (many unrelated communities on one deployment)
 - [ ] Moderator “preview / confirm” before deletes
-- [ ] Additional Lingui locales (beyond initial `en`) + per-chat/pair locale setting UX (overrides remain per locale)
+- [x] Lingui catalogs for `es`, `fr`, and `ru` (loaded with `en`; default locale stays `en`)
+- [ ] Per-chat/pair locale setting UX (overrides remain per locale)
 - [ ] Metrics dashboard
 - [ ] Mini App UI automation inside Telegram WebView (if still needed beyond `C1` API tests)
 

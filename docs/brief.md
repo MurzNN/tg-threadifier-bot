@@ -33,7 +33,7 @@ Later, a lightweight Telegram Mini App (or equivalent in-bot config) lets operat
 | Keep target structured | Non-threaded messages get an interactive “which thread?” prompt |
 | Be operable by non-devs | Chat pairing via bot UI / Mini App |
 | Be verifiable | Core flows covered by E2E tests on Telegram Test DCs |
-| Be multilingual-ready | All default bot templates and Mini App UI via [Lingui](https://lingui.dev/); English first, more locales later |
+| Be multilingual-ready | All default bot templates and Mini App UI via [Lingui](https://lingui.dev/); catalogs for English, Spanish, French, and Russian |
 | Configurable templates | Operators override bot message templates in the Mini App; same placeholders; fallback to translated defaults |
 | Minimize custom code | Prefer existing open-source libraries over reinventing wheels; keep owned surface small |
 | Optional AI thread titles | Opt-in short titles/topics via LLM; truncate message text when AI is off or fails |

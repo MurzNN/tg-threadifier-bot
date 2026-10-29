@@ -50,7 +50,7 @@ Defaults unless the task says otherwise:
 
 After user-facing copy changes:
 
-1. `nub run i18n:extract` (rewrites `src/locales/en/messages.po`; `@lingui/vite-plugin` compiles that catalog on import)
+1. `nub run i18n:extract` (rewrites `src/locales/{locale}/messages.po` for `en`, `es`, `fr`, and `ru`; `@lingui/vite-plugin` compiles those catalogs on import)
 2. Extend `tests/unit/pair.test.ts` and run that file
 3. Update the Flow C table
 
