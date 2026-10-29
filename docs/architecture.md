@@ -297,7 +297,7 @@ Guidelines:
 Environment (illustrative):
 
 - `BOT_TOKEN` — from BotFather (Test DC token for E2E)
-- `DATABASE_URL` — `file:…` (or omit) for local PGlite; `postgres://` / `postgresql://` for real Postgres
+- `DATABASE_URL` — `file:…` (or omit) for local PGlite; `postgres://` / `postgresql://` for real Postgres. `${NAME}` is replaced from another environment variable (unset names fail at startup), for example `postgresql://app:${DATABASE_PASSWORD}@host:5432/app`
 - `SOURCE_CHAT_ID` / `TARGET_CHAT_ID` — optional boot seed into `chat_pairs` for local/Test DC (slash commands or Mini App are the operator path)
 - `WEBAPP_URL` / public origin — Mini App URL registered with BotFather (same host the app serves)
 - `PORT` — HTTP listen port for Mini App + health + webhook

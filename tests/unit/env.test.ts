@@ -24,4 +24,25 @@ describe("loadEnv", () => {
   it("rejects missing BOT_TOKEN", () => {
     expect(() => loadEnv({})).toThrow(/BOT_TOKEN/);
   });
+
+  it("expands ${NAME} references in DATABASE_URL", () => {
+    const env = loadEnv({
+      BOT_TOKEN: "123:abc",
+      DATABASE_PASSWORD: "s3cret",
+      DATABASE_URL:
+        "postgresql://app:${DATABASE_PASSWORD}@tg-threadifier-bot-test-postgresql:5432/app",
+    });
+    expect(env.DATABASE_URL).toBe(
+      "postgresql://app:s3cret@tg-threadifier-bot-test-postgresql:5432/app",
+    );
+  });
+
+  it("rejects a DATABASE_URL reference to an unset variable", () => {
+    expect(() =>
+      loadEnv({
+        BOT_TOKEN: "123:abc",
+        DATABASE_URL: "postgresql://app:${DATABASE_PASSWORD}@localhost:5432/app",
+      }),
+    ).toThrow(/DATABASE_PASSWORD/);
+  });
 });

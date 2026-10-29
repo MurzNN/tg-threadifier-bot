@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+import { expandDatabaseUrl } from "./db/databaseUrl.js";
+
 /**
  * Zod-validated process env. When started via `nub` / `nub run`, `.env` files
  * are loaded automatically; plain `node dist/index.js` expects the host env.
@@ -20,6 +22,8 @@ const envSchema = z
     /**
      * Postgres URL (`postgres://…`) for Helm/prod, or `file:./path` for local
      * PGlite. Omit → default PGlite at `file:./data/threadifier-pg`.
+     * `${NAME}` is replaced from the same environment (for example
+     * `postgresql://app:${DATABASE_PASSWORD}@host:5432/app`).
      */
     DATABASE_URL: z.string().optional(),
     /** Public origin for Mini App / BotFather Web App URL (M4). */
@@ -51,5 +55,10 @@ export function loadEnv(
       .join("; ");
     throw new Error(`Invalid environment: ${details}`);
   }
-  return result.data;
+  const databaseUrl = result.data.DATABASE_URL;
+  return {
+    ...result.data,
+    DATABASE_URL:
+      databaseUrl == null ? undefined : expandDatabaseUrl(databaseUrl, source),
+  };
 }
