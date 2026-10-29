@@ -1,6 +1,8 @@
 # Changelog
 
 
+## [0.5.6](https://github.com/MurzNN/tg-threadifier-bot/compare/v0.5.5...v0.5.6) (2026-10-29)
+
 ## [0.5.5](https://github.com/MurzNN/tg-threadifier-bot/compare/v0.5.4...v0.5.5) (2026-10-29)
 
 ### Bug Fixes
