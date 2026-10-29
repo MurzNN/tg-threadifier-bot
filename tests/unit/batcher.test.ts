@@ -2,6 +2,12 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { ForwardBatcher } from "../../src/bot/relocate/batcher.js";
 
+/** Avoid faking `performance.now`, which Node rejects as non-configurable. */
+const fakeTimers = () =>
+  vi.useFakeTimers({
+    toFake: ["setTimeout", "clearTimeout", "setInterval", "clearInterval", "Date"],
+  });
+
 describe("ForwardBatcher", () => {
   afterEach(() => {
     vi.useRealTimers();
@@ -27,7 +33,7 @@ describe("ForwardBatcher", () => {
   });
 
   it("waits out a quiet period and resets it when another item arrives", async () => {
-    vi.useFakeTimers();
+    fakeTimers();
     const batches: number[][] = [];
     const batcher = new ForwardBatcher<number>({
       windowMs: 2_000,
@@ -46,7 +52,7 @@ describe("ForwardBatcher", () => {
   });
 
   it("stop drops a pending batch", async () => {
-    vi.useFakeTimers();
+    fakeTimers();
     const batches: number[][] = [];
     const batcher = new ForwardBatcher<number>({
       windowMs: 2_000,
