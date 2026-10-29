@@ -37,6 +37,7 @@
     "@electric-sql/pglite": "^0.5.12",
     "@hono/node-server": "^2.1.5",
     "@lingui/core": "^6.10.1",
+    "@lingui/format-po": "^6.10.1",
     "drizzle-orm": "^0.45.4",
     "grammy": "^1.46.0",
     "hono": "^4.13.14",
