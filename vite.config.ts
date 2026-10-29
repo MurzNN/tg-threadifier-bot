@@ -2,7 +2,8 @@ import { lingui } from "@lingui/vite-plugin";
 import { defineConfig } from "vitest/config";
 
 /**
- * Shared Vite config: Lingui macro transform for SSR build, vite-node, and Vitest.
+ * Shared Vite config for the SSR build, vite-node, and Vitest.
+ * `@lingui/vite-plugin` compiles imported `.po` catalogs and transforms macros.
  */
 export default defineConfig({
   plugins: [lingui({ macroTransform: true })],

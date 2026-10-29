@@ -109,7 +109,7 @@ Store overrides in the DB (e.g. `message_template_overrides`: `chat_pair_id`, `t
 
 ### Tooling
 
-- User-facing defaults use the `t` macro from `@lingui/core/macro`. After adding or changing a `t` string, run `nub run i18n:extract` (rewrites `src/locales/en/messages.po`) then `nub run i18n:compile` (rewrites `src/locales/en/messages.ts`). Leave `messages.ts` to the compiler.
+- User-facing defaults use the `t` macro from `@lingui/core/macro`. After adding or changing a `t` string, run `nub run i18n:extract` (rewrites `src/locales/en/messages.po`). `@lingui/vite-plugin` compiles those `.po` catalogs when they are imported (`src/i18n.ts`); there is no `lingui compile` step and no generated `messages.ts`.
 - `tests/setup.ts` calls `setupI18n()`. Unit tests assert English substrings of the rendered reply.
 - Unit-test critical messages with a fixed locale to lock placeholder wiring (links, truncation labels).
 - Unit/integration tests for override resolution (override wins; missing override falls back; invalid placeholder rejected on save).

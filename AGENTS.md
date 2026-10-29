@@ -50,13 +50,13 @@ Defaults unless the task says otherwise:
 
 After user-facing copy changes:
 
-1. `nub run i18n:extract` then `nub run i18n:compile`
+1. `nub run i18n:extract` (rewrites `src/locales/en/messages.po`; `@lingui/vite-plugin` compiles that catalog on import)
 2. Extend `tests/unit/pair.test.ts` and run that file
 3. Update the Flow C table
 
 Update the architecture configuration sentence or the README operator line only when that sentence would become wrong.
 
-Leave relocate, ingest, `drizzle/*.sql`, and `src/locales/en/messages.ts` alone. `src/db/schema.ts` is the schema source of truth unless the task adds a column.
+Leave relocate, ingest, `drizzle/*.sql`, and `src/locales/en/messages.po` alone unless the task changes user-facing copy. `src/db/schema.ts` is the schema source of truth unless the task adds a column.
 
 ## Out of scope (unless roadmap says otherwise)
 

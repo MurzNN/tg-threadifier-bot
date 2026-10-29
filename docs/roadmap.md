@@ -11,7 +11,7 @@ Granular milestones. Order is dependency-aware; checkboxes are for tracking impl
 - [x] Base `package.json`, Vitest smoke test, Dockerfile placeholder entrypoint
 - [x] GitHub Actions CI (`test`) + Release (`release-it` changelog/tag + GHCR image)
 - [x] Scaffold TypeScript + GrammY + Hono project (lint, tsconfig, real bot entry)
-- [x] Wire [Lingui](https://lingui.dev/) (extract/compile scripts, default `en` catalog); `/start` via `t` macro
+- [x] Wire [Lingui](https://lingui.dev/) (extract script, `@lingui/vite-plugin` compiles the default `en` catalog); `/start` via `t` macro
 - [x] Expand Vitest beyond smoke (GrammY API transformer sample)
 - [x] Zod env schema + [pino](https://getpino.io/) logging baseline
 - [x] `.env.example`, empty bot entry that answers `/start`

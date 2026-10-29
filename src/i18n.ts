@@ -1,6 +1,6 @@
 import { i18n } from "@lingui/core";
 
-import { messages as enMessages } from "./locales/en/messages.js";
+import { messages as enMessages } from "./locales/en/messages.po";
 
 /** Default locale for M0; per-pair locale comes later with Mini App config. */
 export const DEFAULT_LOCALE = "en";

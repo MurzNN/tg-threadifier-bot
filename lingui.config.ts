@@ -10,7 +10,6 @@ export default defineConfig({
       include: ["src"],
     },
   ],
-  compileNamespace: "ts",
   orderBy: "message",
   fallbackLocales: {
     default: "en",
