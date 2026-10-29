@@ -5,6 +5,8 @@ description: Install Threadifier, grant rights, pair main and helper chats, and 
 
 Operators (chat admins) install the bot, grant permissions, and link a **main chat** to a **helper chat**. Until the Mini App ships, pairing is done with slash commands (or env vars for automation).
 
+The public instance is [@ThreadifierBot](https://t.me/ThreadifierBot). Add that bot to both chats, or host your own from the [source repository](https://github.com/MurzNN/tg-threadifier-bot).
+
 ## Permissions
 
 Add the bot to both chats. It typically needs to:

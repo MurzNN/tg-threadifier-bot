@@ -2,6 +2,10 @@
 
 Telegram bot that turns offtopic digressions into proper threads in a helper chat — then cleans up the main chat and leaves a clear redirect.
 
+Use the public instance: [@ThreadifierBot](https://t.me/ThreadifierBot).
+
+The bot ships translations for **English**, **Spanish**, **French**, and **Russian**. `/language` sets the language for the current chat.
+
 ## Why
 
 In topic-strict group chats, offtopic posts attract replies before moderators notice. Cleaning up means manually forwarding a whole subtree to another chat, deleting originals, and posting an explanation. Threadifier automates that routine.
