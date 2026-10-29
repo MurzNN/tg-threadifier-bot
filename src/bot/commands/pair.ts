@@ -2,12 +2,14 @@ import { t } from "@lingui/core/macro";
 import type { Bot, Context } from "grammy";
 
 import {
-  disablePairsForChat,
+  deletePairsForChat,
   findEnabledPairForChat,
-  listChatPairs,
+  listChatPairsForUser,
   listEnabledPairs,
+  listEnabledPairsForUser,
   listPairsForChat,
   PairDraftStore,
+  PairOwnedByAnotherUserError,
   upsertChatPair,
   type ChatPair,
   type PairDraft,
@@ -37,14 +39,27 @@ async function completeIfReady(
     return true;
   }
 
-  const pair = await upsertChatPair(db, {
-    sourceChatId: draft.sourceChatId,
-    targetChatId: draft.targetChatId,
-    sourceTitle: draft.sourceTitle,
-    targetTitle: draft.targetTitle,
-    sourceUsernameOrPath: draft.sourceUsernameOrPath,
-    enabled: true,
-  });
+  let pair: ChatPair;
+  try {
+    pair = await upsertChatPair(db, {
+      sourceChatId: draft.sourceChatId,
+      targetChatId: draft.targetChatId,
+      configuredByUserId: operatorId,
+      sourceTitle: draft.sourceTitle,
+      targetTitle: draft.targetTitle,
+      sourceUsernameOrPath: draft.sourceUsernameOrPath,
+      enabled: true,
+    });
+  } catch (error) {
+    if (error instanceof PairOwnedByAnotherUserError) {
+      drafts.clear(operatorId);
+      await ctx.reply(
+        t`This source and target are already paired by another user.`,
+      );
+      return true;
+    }
+    throw error;
+  }
   drafts.clear(operatorId);
   await ctx.reply(
     t`Pair enabled: source ${pair.sourceChatId} → target ${pair.targetChatId}. Ingest is active for both chats.`,
@@ -83,10 +98,10 @@ function formatChatPairStatus(pair: ChatPair, chatId: number): string {
 
 /** `/pair` with no arguments: every pair in private, this chat's pairing in a group. */
 async function replyPairStatus(ctx: Context, db: AppDb): Promise<void> {
-  if (!ctx.chat) return;
+  if (!ctx.chat || !ctx.from) return;
 
   if (ctx.chat.type === "private") {
-    const pairs = await listChatPairs(db);
+    const pairs = await listChatPairsForUser(db, ctx.from.id);
     if (pairs.length === 0) {
       await ctx.reply(
         t`No chat pairs configured. Run /pair source and /pair target inside the group chats to link.`,
@@ -181,29 +196,33 @@ export function registerPairCommands(
       await ctx.reply(t`Run /unpair inside a linked source or target chat.`);
       return;
     }
-    const n = await disablePairsForChat(db, ctx.chat.id);
-    if (n === 0) {
-      await ctx.reply(t`No enabled pair includes this chat.`);
+    if (!ctx.from) return;
+    const { deleted, blocked } = await deletePairsForChat(
+      db,
+      ctx.chat.id,
+      ctx.from.id,
+    );
+    if (deleted === 0 && blocked > 0) {
+      await ctx.reply(t`This pair was configured by another user.`);
       return;
     }
-    if (ctx.from) drafts.clear(ctx.from.id);
-    await ctx.reply(t`Disabled ${n} chat pair(s) involving this chat.`);
+    if (deleted === 0) {
+      await ctx.reply(t`No chat pair includes this chat.`);
+      return;
+    }
+    drafts.clear(ctx.from.id);
+    await ctx.reply(t`Deleted ${deleted} chat pair(s) involving this chat.`);
   });
 
   bot.command("status", async (ctx) => {
-    const pairs = await listEnabledPairs(db);
-    if (pairs.length === 0) {
-      await ctx.reply(
-        t`No enabled chat pairs. Use /pair source and /pair target, or set SOURCE_CHAT_ID and TARGET_CHAT_ID.`,
-      );
-      return;
-    }
+    if (!ctx.from) return;
 
     if (ctx.chat && ctx.chat.type !== "private") {
       const here = await findEnabledPairForChat(db, ctx.chat.id);
       if (!here) {
+        const enabled = await listEnabledPairs(db);
         await ctx.reply(
-          t`This chat is not in an enabled pair. Enabled pairs: ${pairs.length}.`,
+          t`This chat is not in an enabled pair. Enabled pairs: ${enabled.length}.`,
         );
         return;
       }
@@ -219,6 +238,13 @@ export function registerPairCommands(
       return;
     }
 
+    const pairs = await listEnabledPairsForUser(db, ctx.from.id);
+    if (pairs.length === 0) {
+      await ctx.reply(
+        t`No enabled chat pairs. Use /pair source and /pair target, or set SOURCE_CHAT_ID, TARGET_CHAT_ID, and CONFIGURED_BY_USER_ID.`,
+      );
+      return;
+    }
     const lines = pairs.map(
       (p) => `#${p.id}: ${p.sourceChatId} → ${p.targetChatId}`,
     );

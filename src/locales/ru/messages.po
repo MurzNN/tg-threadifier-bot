@@ -46,14 +46,14 @@ msgstr "Не удалось завершить перенос этого обс�
 msgid "Could not match these forwards to stored source messages, so nothing was deleted. The bot only relocates messages it has already seen."
 msgstr "Не удалось сопоставить эти пересылки с сохранёнными исходными сообщениями, поэтому ничего не удалено. Бот переносит только сообщения, которые уже видел."
 
-#. Telegram command menu description for /unpair. Disables the chat pair that includes this chat.
+#. Telegram command menu description for /unpair. Deletes the caller's chat pairs that include this chat.
 #: src/bot/commands/menu.ts
-msgid "Disable the chat pair"
-msgstr "Отключить пару чатов"
+msgid "Delete the chat pair"
+msgstr "Удалить пару чатов"
 
 #: src/bot/commands/pair.ts
-msgid "Disabled {n} chat pair(s) involving this chat."
-msgstr "Отключены пары чатов, в которые входит этот чат: {n}."
+msgid "Deleted {deleted} chat pair(s) involving this chat."
+msgstr "Удалено пар чатов с этим чатом: {deleted}."
 
 #. placeholder {0}: lines.join("\n")
 #: src/bot/commands/pair.ts
@@ -77,16 +77,16 @@ msgid "Media message"
 msgstr "Медиасообщение"
 
 #: src/bot/commands/pair.ts
+msgid "No chat pair includes this chat."
+msgstr "Ни одна пара чатов не включает этот чат."
+
+#: src/bot/commands/pair.ts
 msgid "No chat pairs configured. Run /pair source and /pair target inside the group chats to link."
 msgstr "Пары чатов не настроены. Выполните /pair source и /pair target в групповых чатах, чтобы связать их."
 
 #: src/bot/commands/pair.ts
-msgid "No enabled chat pairs. Use /pair source and /pair target, or set SOURCE_CHAT_ID and TARGET_CHAT_ID."
-msgstr "Нет включённых пар чатов. Используйте /pair source и /pair target или задайте SOURCE_CHAT_ID и TARGET_CHAT_ID."
-
-#: src/bot/commands/pair.ts
-msgid "No enabled pair includes this chat."
-msgstr "Ни одна включённая пара не включает этот чат."
+msgid "No enabled chat pairs. Use /pair source and /pair target, or set SOURCE_CHAT_ID, TARGET_CHAT_ID, and CONFIGURED_BY_USER_ID."
+msgstr "Нет включённых пар чатов. Используйте /pair source и /pair target или задайте SOURCE_CHAT_ID, TARGET_CHAT_ID и CONFIGURED_BY_USER_ID."
 
 #: src/bot/commands/pair.ts
 msgid "Only chat admins can configure pairs."
@@ -154,7 +154,7 @@ msgid "This chat is in {0} pairs:\n"
 msgstr "Этот чат участвует в {0} парах:\n"
 "{1}"
 
-#. placeholder {0}: pairs.length
+#. placeholder {0}: enabled.length
 #: src/bot/commands/pair.ts
 msgid "This chat is not in an enabled pair. Enabled pairs: {0}."
 msgstr "Этот чат не входит во включённую пару. Включённых пар: {0}."
@@ -206,6 +206,14 @@ msgstr "Этот чат — назначение в паре #{0} (включе�
 "Источник: {source}\n"
 "Назначение: {target}"
 
+#: src/bot/commands/pair.ts
+msgid "This pair was configured by another user."
+msgstr "Эту пару настроил другой пользователь."
+
+#: src/bot/commands/pair.ts
+msgid "This source and target are already paired by another user."
+msgstr "Этот источник и назначение уже связал другой пользователь."
+
 #: src/bot/relocate/templates.ts
 msgid "Thread: {threadTitle}\n"
 "Initiated by the user <a href=\"{linkToUser}\">{userDisplayName}</a> in the chat <a href=\"{linkToSourceChat}\">{sourceChatName}</a>.\n"
@@ -215,8 +223,8 @@ msgstr "Тред: {threadTitle}\n"
 "<a href=\"{threadLink}\">Ссылка на тред</a>."
 
 #: src/bot.ts
-msgid "Threadifier is online. Admins: /pair source and /pair target in the groups, or set SOURCE_CHAT_ID and TARGET_CHAT_ID. Check /status."
-msgstr "Threadifier запущен. Администраторы: /pair source и /pair target в группах или задайте SOURCE_CHAT_ID и TARGET_CHAT_ID. Проверьте /status."
+msgid "Threadifier is online. Admins: /pair source and /pair target in the groups, or set SOURCE_CHAT_ID, TARGET_CHAT_ID, and CONFIGURED_BY_USER_ID. Check /status."
+msgstr "Threadifier запущен. Администраторы: /pair source и /pair target в группах или задайте SOURCE_CHAT_ID, TARGET_CHAT_ID и CONFIGURED_BY_USER_ID. Проверьте /status."
 
 #: src/bot/commands/pair.ts
 msgid "Usage: /pair source or /pair target (run inside the group). /pair alone shows pairing status."

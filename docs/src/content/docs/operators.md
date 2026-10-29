@@ -26,13 +26,13 @@ Run these in the groups themselves (you must be an admin for the mutating comman
 |---------|--------|
 | `/pair source` | Mark this group as the main chat. |
 | `/pair target` | Mark this group as the helper chat. |
-| `/pair` | List pairs (private chat) or this chat’s pairing (in a group). Anyone can read; it does not change config. |
-| `/status` | Show the enabled pair and whether this chat is main, helper, or neither. |
-| `/unpair` | Soft-disable the pair that includes this chat (it stays listed as disabled). |
+| `/pair` | List your pairs (private chat) or this chat’s pairing (in a group). Anyone can read; it does not change config. |
+| `/status` | In a group, show the enabled pair and whether this chat is main, helper, or neither. In a private chat, list your enabled pairs. |
+| `/unpair` | Delete your pairs that include this chat. |
 
-Completing a pair soft-disables any other enabled pair that already uses the same helper chat. At most one enabled pair may share a given helper chat.
+Each pair belongs to the admin who configured it. If another admin already paired the same main and helper chats, the bot refuses the new pair and leaves the existing one. Completing a pair soft-disables any other enabled pair that already uses the same helper chat. At most one enabled pair may share a given helper chat.
 
-On startup, if `SOURCE_CHAT_ID` and `TARGET_CHAT_ID` are set in the deployment environment, the bot upserts an enabled pair (useful for local or Test DC setups).
+On startup, if `SOURCE_CHAT_ID`, `TARGET_CHAT_ID`, and `CONFIGURED_BY_USER_ID` are set together in the deployment environment, the bot upserts an enabled pair owned by that user (useful for local or Test DC setups).
 
 When Telegram upgrades a basic group to a supergroup, the chat id changes. The bot remaps stored ids so you usually do not need to re-run `/pair`.
 

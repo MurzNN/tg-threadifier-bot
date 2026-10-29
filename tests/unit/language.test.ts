@@ -32,10 +32,10 @@ const botInfo = {
 } satisfies UserFromGetMe;
 
 const welcome = {
-  en: "Threadifier is online. Admins: /pair source and /pair target in the groups, or set SOURCE_CHAT_ID and TARGET_CHAT_ID. Check /status.",
-  es: "Threadifier está en línea. Administradores: /pair source y /pair target en los grupos, o define SOURCE_CHAT_ID y TARGET_CHAT_ID. Consulta /status.",
-  ru: "Threadifier запущен. Администраторы: /pair source и /pair target в группах или задайте SOURCE_CHAT_ID и TARGET_CHAT_ID. Проверьте /status.",
-  fr: "Threadifier est en ligne. Administrateurs : /pair source et /pair target dans les groupes, ou définissez SOURCE_CHAT_ID et TARGET_CHAT_ID. Consultez /status.",
+  en: "Threadifier is online. Admins: /pair source and /pair target in the groups, or set SOURCE_CHAT_ID, TARGET_CHAT_ID, and CONFIGURED_BY_USER_ID. Check /status.",
+  es: "Threadifier está en línea. Administradores: /pair source y /pair target en los grupos, o define SOURCE_CHAT_ID, TARGET_CHAT_ID y CONFIGURED_BY_USER_ID. Consulta /status.",
+  ru: "Threadifier запущен. Администраторы: /pair source и /pair target в группах или задайте SOURCE_CHAT_ID, TARGET_CHAT_ID и CONFIGURED_BY_USER_ID. Проверьте /status.",
+  fr: "Threadifier est en ligne. Administrateurs : /pair source et /pair target dans les groupes, ou définissez SOURCE_CHAT_ID, TARGET_CHAT_ID et CONFIGURED_BY_USER_ID. Consultez /status.",
 };
 
 function installApiRecorder(bot: Bot): OutgoingCall[] {
@@ -154,7 +154,7 @@ describe("command language", () => {
     await bot.handleUpdate(
       commandUpdate(5, "/status", "en", { id: -300, type: "group" }),
     );
-    expect(calls[0]?.payload.text).toContain("Нет включённых пар чатов");
+    expect(calls[0]?.payload.text).toContain("Этот чат не входит во включённую пару");
   });
 
   it("shows the language picker and ignores an unknown code", async () => {

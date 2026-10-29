@@ -65,14 +65,14 @@ function installApiRecorder(bot: Bot): OutgoingCall[] {
   return calls;
 }
 
-function privateCommand(updateId: number, text: string) {
+function privateCommand(updateId: number, text: string, userId = 7) {
   return {
     update_id: updateId,
     message: {
       message_id: updateId,
       date: 1_700_000_000,
-      chat: { id: 7, type: "private" as const, first_name: "Admin" },
-      from: { id: 7, is_bot: false, first_name: "Admin" },
+      chat: { id: userId, type: "private" as const, first_name: "Admin" },
+      from: { id: userId, is_bot: false, first_name: "Admin" },
       text,
       entities: [
         {
@@ -90,6 +90,7 @@ function groupCommand(
   chatId: number,
   text: string,
   title: string,
+  userId = 7,
 ) {
   return {
     update_id: updateId,
@@ -97,7 +98,7 @@ function groupCommand(
       message_id: updateId,
       date: 1_700_000_000,
       chat: { id: chatId, type: "supergroup" as const, title },
-      from: { id: 7, is_bot: false, first_name: "Admin" },
+      from: { id: userId, is_bot: false, first_name: "Admin" },
       text,
       entities: [{ offset: 0, length: text.indexOf(" ") === -1 ? text.length : text.indexOf(" "), type: "bot_command" as const }],
     },
@@ -131,6 +132,7 @@ describe("pair commands", () => {
     expect(pairs[0]).toMatchObject({
       sourceChatId: -1001,
       targetChatId: -1002,
+      configuredByUserId: 7,
       enabled: true,
     });
 
@@ -171,7 +173,7 @@ describe("pair commands", () => {
     });
   });
 
-  it("/pair with no arguments lists every configured pair in a private chat", async () => {
+  it("/pair with no arguments lists the caller's configured pairs in a private chat", async () => {
     await bot.handleUpdate(privateCommand(1, "/pair"));
     expect(calls.find((c) => c.method === "sendMessage")?.payload).toMatchObject({
       chat_id: 7,
@@ -191,6 +193,13 @@ describe("pair commands", () => {
     expect(text).toContain("Configured pairs:");
     expect(text).toContain("(enabled): Main (-1001) → Helper (-1002)");
     expect(text).toContain("(enabled): Other (-1003) → Side (-1004)");
+
+    calls.length = 0;
+    await bot.handleUpdate(privateCommand(7, "/pair", 8));
+    expect(calls.find((c) => c.method === "sendMessage")?.payload).toMatchObject({
+      chat_id: 8,
+      text: expect.stringContaining("No chat pairs configured"),
+    });
   });
 
   it("/pair with no arguments reports this chat's pairing in a group", async () => {
@@ -232,27 +241,46 @@ describe("pair commands", () => {
     expect(text).not.toContain("not paired");
   });
 
-  it("/pair in a group reports a disabled pair", async () => {
+  it("/unpair deletes the caller's pairs for the chat", async () => {
     await bot.handleUpdate(groupCommand(1, -1001, "/pair source", "Main"));
     await bot.handleUpdate(groupCommand(2, -1002, "/pair target", "Helper"));
     await bot.handleUpdate(groupCommand(3, -1001, "/unpair", "Main"));
-    calls.length = 0;
 
+    expect(await listChatPairs(handle.db)).toHaveLength(0);
+    expect(calls.at(-1)?.payload).toMatchObject({
+      text: expect.stringContaining("Deleted 1 chat pair"),
+    });
+
+    calls.length = 0;
     await bot.handleUpdate(groupCommand(4, -1001, "/pair", "Main"));
-    const text = String(
-      calls.find((c) => c.method === "sendMessage")?.payload.text,
-    );
-    expect(text).toContain("This chat is the source in pair #");
-    expect(text).toContain("(disabled)");
-    expect(text).toContain("Source: Main (-1001)");
-    expect(text).toContain("Target: Helper (-1002)");
+    expect(calls.find((c) => c.method === "sendMessage")?.payload).toMatchObject({
+      text: expect.stringContaining("not paired"),
+    });
   });
 
-  it("/unpair disables pairs for the chat", async () => {
+  it("refuses the same source and target when another user already owns the pair", async () => {
     await bot.handleUpdate(groupCommand(1, -1001, "/pair source", "Main"));
     await bot.handleUpdate(groupCommand(2, -1002, "/pair target", "Helper"));
-    await bot.handleUpdate(groupCommand(3, -1001, "/unpair", "Main"));
+    await bot.handleUpdate(groupCommand(3, -1001, "/pair source", "Main", 8));
+    await bot.handleUpdate(groupCommand(4, -1002, "/pair target", "Helper", 8));
 
-    expect(await listEnabledPairs(handle.db)).toHaveLength(0);
+    expect(calls.at(-1)?.payload).toMatchObject({
+      text: expect.stringContaining("already paired by another user"),
+    });
+    const pairs = await listChatPairs(handle.db);
+    expect(pairs).toHaveLength(1);
+    expect(pairs[0]).toMatchObject({
+      sourceChatId: -1001,
+      targetChatId: -1002,
+      configuredByUserId: 7,
+      enabled: true,
+    });
+
+    calls.length = 0;
+    await bot.handleUpdate(groupCommand(5, -1001, "/unpair", "Main", 8));
+    expect(calls.at(-1)?.payload).toMatchObject({
+      text: expect.stringContaining("configured by another user"),
+    });
+    expect(await listEnabledPairs(handle.db)).toHaveLength(1);
   });
 });

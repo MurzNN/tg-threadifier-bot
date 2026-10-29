@@ -3,6 +3,13 @@ import { and, asc, desc, eq, ne, or } from "drizzle-orm";
 import type { AppDb } from "./client.js";
 import { chatPairs } from "./schema.js";
 
+export class PairOwnedByAnotherUserError extends Error {
+  constructor() {
+    super("This source and target are already paired by another user");
+    this.name = "PairOwnedByAnotherUserError";
+  }
+}
+
 export type ChatPair = {
   id: number;
   sourceChatId: number;
@@ -10,6 +17,7 @@ export type ChatPair = {
   sourceTitle: string | null;
   targetTitle: string | null;
   sourceUsernameOrPath: string | null;
+  configuredByUserId: number;
   aiTitlesEnabled: boolean;
   enabled: boolean;
 };
@@ -17,10 +25,16 @@ export type ChatPair = {
 export type UpsertPairInput = {
   sourceChatId: number;
   targetChatId: number;
+  configuredByUserId: number;
   sourceTitle?: string | null;
   targetTitle?: string | null;
   sourceUsernameOrPath?: string | null;
   enabled?: boolean;
+};
+
+export type DeletePairsForChatResult = {
+  deleted: number;
+  blocked: number;
 };
 
 function mapRow(row: typeof chatPairs.$inferSelect): ChatPair {
@@ -31,6 +45,7 @@ function mapRow(row: typeof chatPairs.$inferSelect): ChatPair {
     sourceTitle: row.sourceTitle,
     targetTitle: row.targetTitle,
     sourceUsernameOrPath: row.sourceUsernameOrPath,
+    configuredByUserId: row.configuredByUserId,
     aiTitlesEnabled: row.aiTitlesEnabled,
     enabled: row.enabled,
   };
@@ -79,6 +94,9 @@ export async function upsertChatPair(
 
   let pair: ChatPair;
   if (existing[0]) {
+    if (existing[0].configuredByUserId !== input.configuredByUserId) {
+      throw new PairOwnedByAnotherUserError();
+    }
     await db
       .update(chatPairs)
       .set({
@@ -104,6 +122,7 @@ export async function upsertChatPair(
         sourceTitle: input.sourceTitle ?? null,
         targetTitle: input.targetTitle ?? null,
         sourceUsernameOrPath: input.sourceUsernameOrPath ?? null,
+        configuredByUserId: input.configuredByUserId,
         enabled,
       })
       .returning();
@@ -124,9 +143,40 @@ export async function listEnabledPairs(db: AppDb): Promise<ChatPair[]> {
   return rows.map(mapRow);
 }
 
-/** Every stored pair, including ones disabled with `/unpair`. */
+/** Every stored pair, including ones left disabled when a newer target pair is enabled. */
 export async function listChatPairs(db: AppDb): Promise<ChatPair[]> {
   const rows = await db.select().from(chatPairs).orderBy(asc(chatPairs.id));
+  return rows.map(mapRow);
+}
+
+/** Pairs configured by this user, including disabled rows. */
+export async function listChatPairsForUser(
+  db: AppDb,
+  userId: number,
+): Promise<ChatPair[]> {
+  const rows = await db
+    .select()
+    .from(chatPairs)
+    .where(eq(chatPairs.configuredByUserId, userId))
+    .orderBy(asc(chatPairs.id));
+  return rows.map(mapRow);
+}
+
+/** Enabled pairs configured by this user. */
+export async function listEnabledPairsForUser(
+  db: AppDb,
+  userId: number,
+): Promise<ChatPair[]> {
+  const rows = await db
+    .select()
+    .from(chatPairs)
+    .where(
+      and(
+        eq(chatPairs.enabled, true),
+        eq(chatPairs.configuredByUserId, userId),
+      ),
+    )
+    .orderBy(asc(chatPairs.id));
   return rows.map(mapRow);
 }
 
@@ -194,21 +244,43 @@ export async function findEnabledPairForChat(
   return rows[0] ? mapRow(rows[0]) : undefined;
 }
 
-export async function disablePairsForChat(
+/**
+ * Delete pairs for this chat that the caller configured.
+ * Rows owned by someone else are left in place and counted as blocked.
+ */
+export async function deletePairsForChat(
   db: AppDb,
   chatId: number,
-): Promise<number> {
-  const result = await db
-    .update(chatPairs)
-    .set({ enabled: false })
+  userId: number,
+): Promise<DeletePairsForChatResult> {
+  const involving = await db
+    .select({ id: chatPairs.id, configuredByUserId: chatPairs.configuredByUserId })
+    .from(chatPairs)
     .where(
       or(
         eq(chatPairs.sourceChatId, chatId),
         eq(chatPairs.targetChatId, chatId),
       ),
+    );
+  const blocked = involving.filter(
+    (row) => row.configuredByUserId !== userId,
+  ).length;
+  if (involving.length === blocked) {
+    return { deleted: 0, blocked };
+  }
+  const result = await db
+    .delete(chatPairs)
+    .where(
+      and(
+        or(
+          eq(chatPairs.sourceChatId, chatId),
+          eq(chatPairs.targetChatId, chatId),
+        ),
+        eq(chatPairs.configuredByUserId, userId),
+      ),
     )
     .returning();
-  return result.length;
+  return { deleted: result.length, blocked };
 }
 
 /** In-memory draft while an admin sets source then target via `/pair`. */

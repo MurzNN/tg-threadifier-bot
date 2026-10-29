@@ -46,14 +46,14 @@ msgstr "Impossible de terminer le déplacement de cette discussion (arrêt à l'
 msgid "Could not match these forwards to stored source messages, so nothing was deleted. The bot only relocates messages it has already seen."
 msgstr "Impossible d'associer ces transferts aux messages source enregistrés, donc rien n'a été supprimé. Le bot ne déplace que les messages qu'il a déjà vus."
 
-#. Telegram command menu description for /unpair. Disables the chat pair that includes this chat.
+#. Telegram command menu description for /unpair. Deletes the caller's chat pairs that include this chat.
 #: src/bot/commands/menu.ts
-msgid "Disable the chat pair"
-msgstr "Désactiver la paire de chats"
+msgid "Delete the chat pair"
+msgstr "Supprimer la paire de chats"
 
 #: src/bot/commands/pair.ts
-msgid "Disabled {n} chat pair(s) involving this chat."
-msgstr "{n} paire(s) de chats incluant ce chat ont été désactivées."
+msgid "Deleted {deleted} chat pair(s) involving this chat."
+msgstr "{deleted} paire(s) de chats incluant ce chat ont été supprimées."
 
 #. placeholder {0}: lines.join("\n")
 #: src/bot/commands/pair.ts
@@ -77,16 +77,16 @@ msgid "Media message"
 msgstr "Message multimédia"
 
 #: src/bot/commands/pair.ts
+msgid "No chat pair includes this chat."
+msgstr "Aucune paire de chats n'inclut ce chat."
+
+#: src/bot/commands/pair.ts
 msgid "No chat pairs configured. Run /pair source and /pair target inside the group chats to link."
 msgstr "Aucune paire de chats configurée. Exécutez /pair source et /pair target dans les chats de groupe pour les lier."
 
 #: src/bot/commands/pair.ts
-msgid "No enabled chat pairs. Use /pair source and /pair target, or set SOURCE_CHAT_ID and TARGET_CHAT_ID."
-msgstr "Aucune paire de chats activée. Utilisez /pair source et /pair target, ou définissez SOURCE_CHAT_ID et TARGET_CHAT_ID."
-
-#: src/bot/commands/pair.ts
-msgid "No enabled pair includes this chat."
-msgstr "Aucune paire activée n'inclut ce chat."
+msgid "No enabled chat pairs. Use /pair source and /pair target, or set SOURCE_CHAT_ID, TARGET_CHAT_ID, and CONFIGURED_BY_USER_ID."
+msgstr "Aucune paire de chats activée. Utilisez /pair source et /pair target, ou définissez SOURCE_CHAT_ID, TARGET_CHAT_ID et CONFIGURED_BY_USER_ID."
 
 #: src/bot/commands/pair.ts
 msgid "Only chat admins can configure pairs."
@@ -154,7 +154,7 @@ msgid "This chat is in {0} pairs:\n"
 msgstr "Ce chat figure dans {0} paires :\n"
 "{1}"
 
-#. placeholder {0}: pairs.length
+#. placeholder {0}: enabled.length
 #: src/bot/commands/pair.ts
 msgid "This chat is not in an enabled pair. Enabled pairs: {0}."
 msgstr "Ce chat ne fait pas partie d'une paire activée. Paires activées : {0}."
@@ -206,6 +206,14 @@ msgstr "Ce chat est la cible dans la paire #{0} (activée).\n"
 "Source : {source}\n"
 "Cible : {target}"
 
+#: src/bot/commands/pair.ts
+msgid "This pair was configured by another user."
+msgstr "Cette paire a été configurée par un autre utilisateur."
+
+#: src/bot/commands/pair.ts
+msgid "This source and target are already paired by another user."
+msgstr "Cette source et cette cible sont déjà associées par un autre utilisateur."
+
 #: src/bot/relocate/templates.ts
 msgid "Thread: {threadTitle}\n"
 "Initiated by the user <a href=\"{linkToUser}\">{userDisplayName}</a> in the chat <a href=\"{linkToSourceChat}\">{sourceChatName}</a>.\n"
@@ -215,8 +223,8 @@ msgstr "Fil : {threadTitle}\n"
 "<a href=\"{threadLink}\">Lien du fil</a>."
 
 #: src/bot.ts
-msgid "Threadifier is online. Admins: /pair source and /pair target in the groups, or set SOURCE_CHAT_ID and TARGET_CHAT_ID. Check /status."
-msgstr "Threadifier est en ligne. Administrateurs : /pair source et /pair target dans les groupes, ou définissez SOURCE_CHAT_ID et TARGET_CHAT_ID. Consultez /status."
+msgid "Threadifier is online. Admins: /pair source and /pair target in the groups, or set SOURCE_CHAT_ID, TARGET_CHAT_ID, and CONFIGURED_BY_USER_ID. Check /status."
+msgstr "Threadifier est en ligne. Administrateurs : /pair source et /pair target dans les groupes, ou définissez SOURCE_CHAT_ID, TARGET_CHAT_ID et CONFIGURED_BY_USER_ID. Consultez /status."
 
 #: src/bot/commands/pair.ts
 msgid "Usage: /pair source or /pair target (run inside the group). /pair alone shows pairing status."

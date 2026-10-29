@@ -46,8 +46,8 @@ export function commandMenu(locale: Locale): BotCommand[] {
       command: "unpair",
       description: t({
         comment:
-          "Telegram command menu description for /unpair. Disables the chat pair that includes this chat.",
-        message: "Disable the chat pair",
+          "Telegram command menu description for /unpair. Deletes the caller's chat pairs that include this chat.",
+        message: "Delete the chat pair",
       }),
     },
   ]);

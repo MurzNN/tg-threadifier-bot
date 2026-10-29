@@ -182,6 +182,7 @@ describe("Flow A relocate (API transformer)", () => {
       targetChatId: TARGET_CHAT_ID,
       sourceTitle: "Stale",
       targetTitle: "Helper",
+      configuredByUserId: 1,
       enabled: true,
     });
 

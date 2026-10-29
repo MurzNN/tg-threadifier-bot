@@ -45,7 +45,7 @@ nub run dev            # long polling + GET /health on PORT (default 3000)
 
 Useful scripts: `nub run typecheck`, `nub run lint`, `nub run i18n:extract`, `nub run db:studio` (local PGlite at `file:./data/threadifier-pg` unless `DATABASE_URL` is a Postgres URL), `nub run build` / `nub run start`. Nub loads `.env` automatically when running scripts/files.
 
-Operators bind chats with `/pair source` and `/pair target` (or `SOURCE_CHAT_ID` / `TARGET_CHAT_ID`), review them with `/pair` or `/status`, and disable them with `/unpair` until the Mini App (M4). `/language` sets the command language for the current chat. `/start` stores a fallback from the Telegram account when the bot ships that language, otherwise English, for chats that have not chosen one.
+Operators bind chats with `/pair source` and `/pair target` (or `SOURCE_CHAT_ID` / `TARGET_CHAT_ID` / `CONFIGURED_BY_USER_ID`), review their own pairs with `/pair` or `/status`, and delete them with `/unpair` until the Mini App (M4). `/language` sets the command language for the current chat. `/start` stores a fallback from the Telegram account when the bot ships that language, otherwise English, for chats that have not chosen one.
 
 ### Docker & Helm
 

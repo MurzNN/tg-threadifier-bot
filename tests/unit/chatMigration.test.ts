@@ -81,6 +81,7 @@ describe("remapChatId", () => {
     const pair = await upsertChatPair(handle.db, {
       sourceChatId: OLD_GROUP,
       targetChatId: OTHER,
+      configuredByUserId: 1,
       enabled: true,
     });
     await upsertMessage(handle.db, {
@@ -179,6 +180,7 @@ describe("remapChatId", () => {
     await upsertChatPair(handle.db, {
       sourceChatId: OTHER,
       targetChatId: OLD_GROUP,
+      configuredByUserId: 1,
       enabled: true,
     });
     await remapChatId(handle.db, OLD_GROUP, NEW_SUPERGROUP);
@@ -192,6 +194,7 @@ describe("remapChatId", () => {
     const kept = await upsertChatPair(handle.db, {
       sourceChatId: NEW_SUPERGROUP,
       targetChatId: OTHER,
+      configuredByUserId: 1,
       enabled: true,
     });
     // Legacy row still pointing at the pre-upgrade source id (bypasses upsert).
@@ -200,6 +203,7 @@ describe("remapChatId", () => {
       .values({
         sourceChatId: OLD_GROUP,
         targetChatId: OTHER,
+        configuredByUserId: 1,
         enabled: true,
       })
       .returning();
@@ -267,6 +271,7 @@ describe("chat migration middleware", () => {
     await upsertChatPair(handle.db, {
       sourceChatId: OLD_GROUP,
       targetChatId: OTHER,
+      configuredByUserId: 1,
       enabled: true,
     });
     drafts.set(1, { sourceChatId: OLD_GROUP });

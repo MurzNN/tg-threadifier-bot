@@ -47,7 +47,7 @@ Defaults unless the task says otherwise:
 
 - Command replies are plain `ctx.reply` text.
 - A no-argument read (`/pair`, `/status`) is available to anyone who can send it. `/pair source`, `/pair target`, and `/unpair` stay admin-gated.
-- Pairs are global rows in `chat_pairs`. "All pairs" includes disabled and env-seeded rows. There is no configuring-user column; add one only when the task asks to attribute a pair to an operator.
+- Each `chat_pairs` row is owned by `configured_by_user_id`. Private `/pair` and `/status` list that user's rows. `/unpair` deletes the caller's rows for the current chat. Creating the same source and target as another user is an error and does not change the existing row.
 
 After user-facing copy changes:
 

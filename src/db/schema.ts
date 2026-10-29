@@ -44,6 +44,8 @@ export const chatPairs = pgTable("chat_pairs", {
   sourceTitle: text("source_title"),
   targetTitle: text("target_title"),
   sourceUsernameOrPath: text("source_username_or_path"),
+  /** Telegram user who configured this pair. */
+  configuredByUserId: bigint("configured_by_user_id", { mode: "number" }).notNull(),
   aiTitlesEnabled: boolean("ai_titles_enabled").notNull().default(false),
   enabled: boolean("enabled").notNull().default(true),
   createdAt: timestamp("created_at", { withTimezone: true, mode: "date" })

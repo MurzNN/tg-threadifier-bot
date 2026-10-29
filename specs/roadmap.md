@@ -26,7 +26,7 @@ Granular milestones. Order is dependency-aware; checkboxes are for tracking impl
 - [x] Postgres dialect boot: PGlite (local default) + Postgres URL (Helm/prod)
 - [x] GrammY middleware: upsert messages from configured chats
 - [x] Remap stored chat ids on group → supergroup upgrade (`migrate_to_chat_id` / `migrate_from_chat_id`)
-- [x] Temporary chat-pair config until Mini App: **env seed** (`SOURCE_CHAT_ID` / `TARGET_CHAT_ID`) **and** operator slash commands (`/pair`, `/unpair`, `/status`) that persist to `chat_pairs`
+- [x] Temporary chat-pair config until Mini App: **env seed** (`SOURCE_CHAT_ID` / `TARGET_CHAT_ID` / `CONFIGURED_BY_USER_ID`) **and** operator slash commands (`/pair`, `/unpair`, `/status`) that persist to `chat_pairs`
 - [x] Unit tests for fingerprint / truncation helpers
 - [x] Integration scaffold: PGlite persistence smoke (Bot API emulator HTTP wiring deferred to M2 Flow A scenarios)
 

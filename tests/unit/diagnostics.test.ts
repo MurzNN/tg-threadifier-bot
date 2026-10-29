@@ -49,6 +49,7 @@ describe("ingest diagnostics", () => {
     await upsertChatPair(handle.db, {
       sourceChatId: -1001,
       targetChatId: -1002,
+      configuredByUserId: 1,
       enabled: true,
     });
     const { logger, lines } = captureLogger();

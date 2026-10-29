@@ -48,6 +48,7 @@ export async function seedPair(db: AppDb): Promise<void> {
     targetChatId: TARGET_CHAT_ID,
     sourceTitle: "Main",
     targetTitle: "Helper",
+    configuredByUserId: 1,
     enabled: true,
   });
 }

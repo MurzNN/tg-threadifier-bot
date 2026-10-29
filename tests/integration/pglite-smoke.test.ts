@@ -34,6 +34,7 @@ describe("PGlite persistence smoke", () => {
         NODE_ENV: "test",
         SOURCE_CHAT_ID: -42,
         TARGET_CHAT_ID: -43,
+        CONFIGURED_BY_USER_ID: 7,
       },
       logger,
     );
@@ -43,6 +44,7 @@ describe("PGlite persistence smoke", () => {
     expect(pairs[0]).toMatchObject({
       sourceChatId: -42,
       targetChatId: -43,
+      configuredByUserId: 7,
       enabled: true,
     });
 
@@ -82,11 +84,13 @@ describe("PGlite persistence smoke", () => {
     const a = await upsertChatPair(handle.db, {
       sourceChatId: 1,
       targetChatId: 2,
+      configuredByUserId: 7,
       sourceTitle: "A",
     });
     const b = await upsertChatPair(handle.db, {
       sourceChatId: 1,
       targetChatId: 2,
+      configuredByUserId: 7,
       sourceTitle: "A2",
     });
     expect(b.id).toBe(a.id);

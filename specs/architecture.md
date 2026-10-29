@@ -179,6 +179,7 @@ Minimal fields to support matching and UI:
 | `target_chat_id` | |
 | `source_title` / `target_title` | Cached display names |
 | `source_username_or_path` | For deep links when public |
+| `configured_by_user_id` | Telegram user who configured the pair; required; TS: `configuredByUserId` |
 | `ai_titles_enabled` | Optional; default false; TS: `aiTitlesEnabled` |
 | `enabled` | Soft disable |
 
@@ -188,12 +189,12 @@ Handlers live in `src/bot/commands/pair.ts`. Persistence lives in `src/db/chatPa
 
 - Replies are plain text (`ctx.reply`, no `parse_mode`). Telegram HTML and `escapeHtml` are for relocate templates (`src/bot/relocate/templates.ts`).
 - `requireChatAdmin` (`src/bot/admin.ts`) treats a private chat as allowed and, in a group, requires Telegram status `creator` or `administrator`. `/pair` with no arguments and `/status` do not call it. `/pair source`, `/pair target`, and `/unpair` do.
-- Rows are not owned by the operator who created them. The table has no configuring-user column.
-- Upsert identity is `(source_chat_id, target_chat_id)`. One chat may appear in more than one row.
-- **At most one enabled pair per `target_chat_id`.** Enabling a pair (via `/pair`, env seed, or upsert) soft-disables every other enabled row that shares that target. Lookup prefers the newest pair id (`ORDER BY id DESC`).
+- Every row is owned by `configured_by_user_id`. Slash commands store the caller's Telegram user id. Env seed stores `CONFIGURED_BY_USER_ID`.
+- Upsert identity is `(source_chat_id, target_chat_id)`. One chat may appear in more than one row. If that exact pair already belongs to a different user, the upsert writes nothing and `/pair` tells the caller the pair is already configured by another user.
+- **At most one enabled pair per `target_chat_id`.** Enabling a pair (via `/pair`, env seed, or upsert) soft-disables every other enabled row that shares that target, including another user's row. Lookup prefers the newest pair id (`ORDER BY id DESC`).
 - Relocate still defends against legacy duplicate enabled targets: it tries each enabled pair for the target until a full batch match succeeds, and logs a warning when more than one enabled pair exists or when a non-preferred pair wins.
 - Group → supergroup remaps that would collide with an existing `(source, target)` row soft-disable the remapped row and keep the existing one.
-- `/unpair` sets `enabled=false` and leaves the row. A list of all pairs includes disabled rows and rows seeded from `SOURCE_CHAT_ID` / `TARGET_CHAT_ID`.
+- `/unpair` deletes the caller's rows that include this chat. Another user's rows stay. A private `/pair` or `/status` list includes only the caller's rows (disabled rows remain when a newer pair for the same target soft-disabled them). A group read still reports every pair that includes that chat.
 - An in-progress `/pair source` then `/pair target` lives in the in-memory `PairDraftStore`, keyed by the operator's Telegram user id. The row is written when both chats are set.
 
 **`threads`**
@@ -298,12 +299,12 @@ Environment (illustrative):
 
 - `BOT_TOKEN` — from BotFather (Test DC token for E2E)
 - `DATABASE_URL` — `file:…` (or omit) for local PGlite; `postgres://` / `postgresql://` for real Postgres. `${NAME}` is replaced from another environment variable (unset names fail at startup), for example `postgresql://app:${DATABASE_PASSWORD}@host:5432/app`
-- `SOURCE_CHAT_ID` / `TARGET_CHAT_ID` — optional boot seed into `chat_pairs` for local/Test DC (slash commands or Mini App are the operator path)
+- `SOURCE_CHAT_ID` / `TARGET_CHAT_ID` / `CONFIGURED_BY_USER_ID` — optional boot seed into `chat_pairs` for local/Test DC. All three are set together, or none are. The seeded row's owner is `CONFIGURED_BY_USER_ID`. Slash commands or the Mini App are the operator path.
 - `WEBAPP_URL` / public origin — Mini App URL registered with BotFather (same host the app serves)
 - `PORT` — HTTP listen port for Mini App + health + webhook
 - Optional: `LOG_LEVEL`, feature flags
 
-Chat IDs live in `chat_pairs` after pairing. Until M4, operators can also use `/pair`, `/unpair`, `/status` (see [workflows.md](workflows.md) Flow C). `/pair` with no arguments lists every stored pair in a private chat and reports the current chat's pairing in a group. `/language` sets this chat's command language. `/start` stores the caller's fallback language from the Telegram account when that language is shipped, otherwise `en`. Helm values map secrets into the container env.
+Chat IDs live in `chat_pairs` after pairing. Until M4, operators can also use `/pair`, `/unpair`, `/status` (see [workflows.md](workflows.md) Flow C). `/pair` with no arguments lists the caller's pairs in a private chat and reports the current chat's pairing in a group. `/language` sets this chat's command language. `/start` stores the caller's fallback language from the Telegram account when that language is shipped, otherwise `en`. Helm values map secrets into the container env.
 
 ## Testing strategy
 

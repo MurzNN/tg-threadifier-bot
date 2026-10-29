@@ -30,15 +30,25 @@ const envSchema = z
     WEBAPP_URL: z.string().url().optional(),
     SOURCE_CHAT_ID: z.coerce.number().optional(),
     TARGET_CHAT_ID: z.coerce.number().optional(),
+    /** Telegram user id stored as the owner of the env-seeded pair. */
+    CONFIGURED_BY_USER_ID: z.coerce.number().optional(),
   })
   .superRefine((val, ctx) => {
     const hasSource = val.SOURCE_CHAT_ID != null;
     const hasTarget = val.TARGET_CHAT_ID != null;
-    if (hasSource !== hasTarget) {
+    const hasOwner = val.CONFIGURED_BY_USER_ID != null;
+    const setCount = [hasSource, hasTarget, hasOwner].filter(Boolean).length;
+    if (setCount !== 0 && setCount !== 3) {
+      const path = !hasSource
+        ? ["SOURCE_CHAT_ID"]
+        : !hasTarget
+          ? ["TARGET_CHAT_ID"]
+          : ["CONFIGURED_BY_USER_ID"];
       ctx.addIssue({
         code: "custom",
-        message: "SOURCE_CHAT_ID and TARGET_CHAT_ID must be set together",
-        path: hasSource ? ["TARGET_CHAT_ID"] : ["SOURCE_CHAT_ID"],
+        message:
+          "SOURCE_CHAT_ID, TARGET_CHAT_ID, and CONFIGURED_BY_USER_ID must be set together",
+        path,
       });
     }
   });

@@ -21,6 +21,16 @@ describe("loadEnv", () => {
     expect(env.TELEGRAM_ENVIRONMENT).toBe("test");
   });
 
+  it("rejects a partial chat-pair seed", () => {
+    expect(() =>
+      loadEnv({
+        BOT_TOKEN: "123:abc",
+        SOURCE_CHAT_ID: "-1001",
+        TARGET_CHAT_ID: "-1002",
+      }),
+    ).toThrow(/CONFIGURED_BY_USER_ID/);
+  });
+
   it("rejects missing BOT_TOKEN", () => {
     expect(() => loadEnv({})).toThrow(/BOT_TOKEN/);
   });
