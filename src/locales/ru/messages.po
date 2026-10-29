@@ -120,8 +120,8 @@ msgid "No chat pairs configured. Run /pair source and /pair target inside the gr
 msgstr "Связки чатов не настроены. Выполните /pair source и /pair target в групповых чатах, чтобы связать их."
 
 #: src/bot/commands/pair.ts
-msgid "No enabled chat pairs. Use /pair source and /pair target, or set SOURCE_CHAT_ID, TARGET_CHAT_ID, and CONFIGURED_BY_USER_ID."
-msgstr "Нет включённых связок чатов. Используйте /pair source и /pair target или задайте SOURCE_CHAT_ID, TARGET_CHAT_ID и CONFIGURED_BY_USER_ID."
+msgid "No enabled chat pairs. Use /pair source and /pair target."
+msgstr "Нет включённых связок чатов. Используйте /pair source и /pair target."
 
 #. Callback alert when the moderator wants to attach forwards but this helper chat has no threads yet.
 #: src/bot/relocate/templates.ts
@@ -297,10 +297,6 @@ msgstr "Ветка: {threadTitle}\n"
 msgid "Thread: {threadTitle12}"
 msgstr "Ветка: {threadTitle12}"
 
-#: src/bot.ts
-msgid "Threadifier is online. Admins: /pair source and /pair target in the groups, or set SOURCE_CHAT_ID, TARGET_CHAT_ID, and CONFIGURED_BY_USER_ID. Check /status."
-msgstr "Threadifier запущен. Администраторы: /pair source и /pair target в группах или задайте SOURCE_CHAT_ID, TARGET_CHAT_ID и CONFIGURED_BY_USER_ID. Проверьте /status."
-
 #: src/bot/commands/pair.ts
 msgid "Usage: /pair source or /pair target (run inside the group). /pair alone shows pairing status."
 msgstr "Использование: /pair source или /pair target (выполните в группе). /pair без аргументов показывает состояние связывания."
@@ -308,3 +304,14 @@ msgstr "Использование: /pair source или /pair target (выпол
 #: src/bot/relocate/templates.ts
 msgid "user"
 msgstr "пользователь"
+
+#. /start welcome. {operatorGuideUrl} is the public operator setup guide.
+#: src/bot.ts
+msgid "When moderators forward offtopic from the main chat to the helper chat, I rebuild it as a thread and leave a link behind.\n"
+"\n"
+"Operators: run /pair source and /pair target in the groups, then check /status.\n"
+"Guide: {operatorGuideUrl}"
+msgstr "Когда модераторы пересылают оффтоп из основного чата во вспомогательный, я собираю его в ветку и оставляю ссылку.\n"
+"\n"
+"Операторы: выполните /pair source и /pair target в группах, затем проверьте /status.\n"
+"Руководство: {operatorGuideUrl}"

@@ -182,7 +182,7 @@ On startup the bot publishes its command menu with `setMyCommands` for private c
 
 | Command | Who | Behavior |
 |---------|-----|----------|
-| `/start` | Anyone | Welcome text in this chat's language when one is set. Otherwise the caller's account language. Stores `user_settings.locale` from the account `language_code` when the base language is `en`, `es`, `fr`, or `ru` (`es-MX` counts as `es`). Any other code stores `en`. This does not replace a `/language` choice for the chat. |
+| `/start` | Anyone | Welcome text: what members see after a relocate, then a short operator note (`/pair source`, `/pair target`, `/status`) and a link to the operator guide. Uses this chat's language when one is set, otherwise the caller's account language. Stores `user_settings.locale` from the account `language_code` when the base language is `en`, `es`, `fr`, or `ru` (`es-MX` counts as `es`). Any other code stores `en`. This does not replace a `/language` choice for the chat. |
 | `/language` | Anyone | Shows English, Español, Français, and Русский for this chat. A button or a code (`/language fr`) stores `chat_settings.locale`. An unknown code does not change it. Another chat keeps its own language. |
 | `/pair`, `/status`, `/unpair` | See Flow C | The reply uses this chat's locale, then the caller's `user_settings.locale`, then the account language. Reading those commands does not write a row. |
 

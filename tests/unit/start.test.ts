@@ -3,7 +3,7 @@ import type { ApiCallFn, Bot } from "grammy";
 import type { UserFromGetMe } from "grammy/types";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
-import { createBot } from "../../src/bot.js";
+import { createBot, operatorGuideUrl } from "../../src/bot.js";
 import type { DbHandle } from "../../src/db/client.js";
 import { createLogger } from "../../src/logger.js";
 import { createTestDb } from "../helpers/db.js";
@@ -73,7 +73,12 @@ describe("/start (GrammY API transformer)", () => {
     expect(calls[0]?.method).toBe("sendMessage");
     expect(calls[0]?.payload).toMatchObject({
       chat_id: 100,
-      text: t`Threadifier is online. Admins: /pair source and /pair target in the groups, or set SOURCE_CHAT_ID, TARGET_CHAT_ID, and CONFIGURED_BY_USER_ID. Check /status.`,
+      text: t({
+        message: `When moderators forward offtopic from the main chat to the helper chat, I rebuild it as a thread and leave a link behind.
+
+Operators: run /pair source and /pair target in the groups, then check /status.
+Guide: ${operatorGuideUrl}`,
+      }),
     });
   });
 });

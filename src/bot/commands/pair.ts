@@ -241,7 +241,7 @@ export function registerPairCommands(
     const pairs = await listEnabledPairsForUser(db, ctx.from.id);
     if (pairs.length === 0) {
       await ctx.reply(
-        t`No enabled chat pairs. Use /pair source and /pair target, or set SOURCE_CHAT_ID, TARGET_CHAT_ID, and CONFIGURED_BY_USER_ID.`,
+        t`No enabled chat pairs. Use /pair source and /pair target.`,
       );
       return;
     }

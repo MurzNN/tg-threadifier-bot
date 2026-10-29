@@ -118,7 +118,7 @@ msgid "No chat pairs configured. Run /pair source and /pair target inside the gr
 msgstr ""
 
 #: src/bot/commands/pair.ts
-msgid "No enabled chat pairs. Use /pair source and /pair target, or set SOURCE_CHAT_ID, TARGET_CHAT_ID, and CONFIGURED_BY_USER_ID."
+msgid "No enabled chat pairs. Use /pair source and /pair target."
 msgstr ""
 
 #. Callback alert when the moderator wants to attach forwards but this helper chat has no threads yet.
@@ -284,14 +284,18 @@ msgstr ""
 msgid "Thread: {threadTitle12}"
 msgstr ""
 
-#: src/bot.ts
-msgid "Threadifier is online. Admins: /pair source and /pair target in the groups, or set SOURCE_CHAT_ID, TARGET_CHAT_ID, and CONFIGURED_BY_USER_ID. Check /status."
-msgstr ""
-
 #: src/bot/commands/pair.ts
 msgid "Usage: /pair source or /pair target (run inside the group). /pair alone shows pairing status."
 msgstr ""
 
 #: src/bot/relocate/templates.ts
 msgid "user"
+msgstr ""
+
+#. /start welcome. {operatorGuideUrl} is the public operator setup guide.
+#: src/bot.ts
+msgid "When moderators forward offtopic from the main chat to the helper chat, I rebuild it as a thread and leave a link behind.\n"
+"\n"
+"Operators: run /pair source and /pair target in the groups, then check /status.\n"
+"Guide: {operatorGuideUrl}"
 msgstr ""

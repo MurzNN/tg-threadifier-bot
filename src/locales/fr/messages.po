@@ -120,8 +120,8 @@ msgid "No chat pairs configured. Run /pair source and /pair target inside the gr
 msgstr "Aucune paire de chats configurée. Exécutez /pair source et /pair target dans les chats de groupe pour les lier."
 
 #: src/bot/commands/pair.ts
-msgid "No enabled chat pairs. Use /pair source and /pair target, or set SOURCE_CHAT_ID, TARGET_CHAT_ID, and CONFIGURED_BY_USER_ID."
-msgstr "Aucune paire de chats activée. Utilisez /pair source et /pair target, ou définissez SOURCE_CHAT_ID, TARGET_CHAT_ID et CONFIGURED_BY_USER_ID."
+msgid "No enabled chat pairs. Use /pair source and /pair target."
+msgstr "Aucune paire de chats activée. Utilisez /pair source et /pair target."
 
 #. Callback alert when the moderator wants to attach forwards but this helper chat has no threads yet.
 #: src/bot/relocate/templates.ts
@@ -297,10 +297,6 @@ msgstr "Fil : {threadTitle}\n"
 msgid "Thread: {threadTitle12}"
 msgstr "Fil : {threadTitle12}"
 
-#: src/bot.ts
-msgid "Threadifier is online. Admins: /pair source and /pair target in the groups, or set SOURCE_CHAT_ID, TARGET_CHAT_ID, and CONFIGURED_BY_USER_ID. Check /status."
-msgstr "Threadifier est en ligne. Administrateurs : /pair source et /pair target dans les groupes, ou définissez SOURCE_CHAT_ID, TARGET_CHAT_ID et CONFIGURED_BY_USER_ID. Consultez /status."
-
 #: src/bot/commands/pair.ts
 msgid "Usage: /pair source or /pair target (run inside the group). /pair alone shows pairing status."
 msgstr "Utilisation : /pair source ou /pair target (à lancer dans le groupe). /pair seul affiche l'état de l'appariement."
@@ -308,3 +304,14 @@ msgstr "Utilisation : /pair source ou /pair target (à lancer dans le groupe). /
 #: src/bot/relocate/templates.ts
 msgid "user"
 msgstr "utilisateur"
+
+#. /start welcome. {operatorGuideUrl} is the public operator setup guide.
+#: src/bot.ts
+msgid "When moderators forward offtopic from the main chat to the helper chat, I rebuild it as a thread and leave a link behind.\n"
+"\n"
+"Operators: run /pair source and /pair target in the groups, then check /status.\n"
+"Guide: {operatorGuideUrl}"
+msgstr "Lorsque les modérateurs transfèrent le hors-sujet du chat principal vers le chat d'aide, je le reconstitue en fil et je laisse un lien.\n"
+"\n"
+"Opérateurs : lancez /pair source et /pair target dans les groupes, puis consultez /status.\n"
+"Guide : {operatorGuideUrl}"

@@ -3,7 +3,7 @@ import type { ApiCallFn, Bot } from "grammy";
 import type { UserFromGetMe } from "grammy/types";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
-import { createBot } from "../../src/bot.js";
+import { createBot, operatorGuideUrl } from "../../src/bot.js";
 import { publishCommandMenu } from "../../src/bot/commands/menu.js";
 import type { DbHandle } from "../../src/db/client.js";
 import { getChatLocale } from "../../src/db/chatSettings.js";
@@ -34,7 +34,12 @@ const botInfo = {
 } satisfies UserFromGetMe;
 
 function welcomeText(): string {
-  return t`Threadifier is online. Admins: /pair source and /pair target in the groups, or set SOURCE_CHAT_ID, TARGET_CHAT_ID, and CONFIGURED_BY_USER_ID. Check /status.`;
+  return t({
+    message: `When moderators forward offtopic from the main chat to the helper chat, I rebuild it as a thread and leave a link behind.
+
+Operators: run /pair source and /pair target in the groups, then check /status.
+Guide: ${operatorGuideUrl}`,
+  });
 }
 
 function noPairsText(): string {

@@ -187,6 +187,13 @@ describe("pair commands", () => {
     );
   });
 
+  it("/status in a private chat with no pairs points at the slash commands", async () => {
+    await bot.handleUpdate(privateCommand(1, "/status"));
+    expect(calls.find((c) => c.method === "sendMessage")?.payload.text).toBe(
+      t`No enabled chat pairs. Use /pair source and /pair target.`,
+    );
+  });
+
   it("/pair with no arguments lists the caller's configured pairs in a private chat", async () => {
     const noPairs = t`No chat pairs configured. Run /pair source and /pair target inside the group chats to link.`;
     await bot.handleUpdate(privateCommand(1, "/pair"));

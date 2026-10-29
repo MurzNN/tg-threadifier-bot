@@ -35,7 +35,7 @@ A later update will prompt you when you post a top-level message in the helper c
 
 | Command | What it does |
 |---------|----------------|
-| `/start` | Shows a welcome message. May remember your Telegram language as a personal fallback when the bot supports it. |
+| `/start` | Explains what happens when offtopic is moved, with a short setup note and a link to the [operator guide](./operators/). May remember your Telegram language as a personal fallback when the bot supports it. |
 | `/language` | Sets the language for **this chat** (English, Español, Français, or Русский). Another chat keeps its own setting. |
 
 Anyone who can send messages can also **read** `/pair` or `/status` to see how this chat is linked. In a private chat those commands list only the pairs you configured. Changing pairs (`/pair source`, `/pair target`, `/unpair`) is for admins — see [For operators](./operators/). `/unpair` deletes the admin’s own pairs for that chat.
