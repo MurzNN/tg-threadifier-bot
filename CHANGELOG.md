@@ -1,6 +1,12 @@
 # Changelog
 
 
+## [0.5.4](https://github.com/MurzNN/tg-threadifier-bot/compare/v0.5.3...v0.5.4) (2026-10-29)
+
+### Features
+
+* **bot:** confirm a forwarded bundle before relocating ([1c49718](https://github.com/MurzNN/tg-threadifier-bot/commit/1c4971854e0e6d53241f6965f53b9dc9828270fa))
+
 ## [0.5.3](https://github.com/MurzNN/tg-threadifier-bot/compare/v0.5.2...v0.5.3) (2026-10-29)
 
 ## [0.5.2](https://github.com/MurzNN/tg-threadifier-bot/compare/v0.5.1...v0.5.2) (2026-10-29)

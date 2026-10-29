@@ -1,6 +1,6 @@
 {
   "name": "tg-threadifier-bot",
-  "version": "0.5.3",
+  "version": "0.5.4",
   "private": true,
   "description": "Telegram bot that relocates offtopic discussions into helper-chat threads",
   "license": "MIT",
