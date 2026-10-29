@@ -1,6 +1,12 @@
 # Changelog
 
 
+## [0.5.2](https://github.com/MurzNN/tg-threadifier-bot/compare/v0.5.1...v0.5.2) (2026-10-29)
+
+### Bug Fixes
+
+* **bot:** keep chat pairs per configuring user ([0fa150e](https://github.com/MurzNN/tg-threadifier-bot/commit/0fa150e676a55eba083f0f06a65e3b74cda3f547))
+
 ## [0.5.1](https://github.com/MurzNN/tg-threadifier-bot/compare/v0.5.0...v0.5.1) (2026-10-29)
 
 ## [0.5.0](https://github.com/MurzNN/tg-threadifier-bot/compare/v0.4.1...v0.5.0) (2026-10-29)
