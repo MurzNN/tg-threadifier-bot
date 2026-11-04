@@ -1,0 +1,446 @@
+lockfile_version: '1'
+apm_version: 0.35.0
+dependencies:
+- repo_url: lingui/skills
+  name: lingui
+  host: github.com
+  resolved_commit: 503a103dfb559f96812932ba3a82b2aa313e430a
+  version: 503a103
+  package_type: skill_bundle
+  deployed_files:
+  - .agents/skills/enhanced-message-context
+  - .agents/skills/enhanced-message-context/SKILL.md
+  - .agents/skills/find-unwrapped-strings
+  - .agents/skills/find-unwrapped-strings/SKILL.md
+  - .agents/skills/find-unwrapped-strings/references/eslint-config.md
+  - .agents/skills/lingui-best-practices
+  - .agents/skills/lingui-best-practices/SKILL.md
+  - .agents/skills/lingui-best-practices/references/common-mistakes.md
+  - .agents/skills/lingui-best-practices/references/configuration.md
+  - .agents/skills/lingui-best-practices/references/integration-recipes.md
+  - .agents/skills/lingui-framework-setup
+  - .agents/skills/lingui-framework-setup/SKILL.md
+  - .agents/skills/lingui-framework-setup/references/nextjs-app-router.md
+  - .agents/skills/lingui-framework-setup/references/react-router-remix.md
+  - .agents/skills/lingui-framework-setup/references/tanstack-start.md
+  - .agents/skills/lingui-framework-setup/references/vite-spa.md
+  - .agents/skills/lingui-framework-setup/references/vue-vite.md
+  - .agents/skills/migrate-i18next-to-lingui
+  - .agents/skills/migrate-i18next-to-lingui/SKILL.md
+  - .agents/skills/migrate-i18next-to-lingui/references/catalog-conversion.md
+  - .agents/skills/migrate-i18next-to-lingui/references/migration-patterns.md
+  - .agents/skills/swc-plugin-compatibility
+  - .agents/skills/swc-plugin-compatibility/SKILL.md
+  deployed_file_hashes:
+    .agents/skills/enhanced-message-context/SKILL.md: sha256:fbf1ae9128abd041369982dd3b09c58bdaa95264cdafc2050eacafadc13f7925
+    .agents/skills/find-unwrapped-strings/SKILL.md: sha256:1f8b8e2baef5976ece84aa2f8d68179188f8cecbd944069f40cf63902a621389
+    .agents/skills/find-unwrapped-strings/references/eslint-config.md: sha256:1c02dd0f43de817dd0b509c18456daae36ad56e5443c7f723bb3dc7e5aac29bd
+    .agents/skills/lingui-best-practices/SKILL.md: sha256:7eb781d094d8c6bab0c8d38e859dfb699dc015bfa03792862ed5f2dd9c669b3e
+    .agents/skills/lingui-best-practices/references/common-mistakes.md: sha256:0040fb3762ad1e8e1460d985ddb99ac6aff58c733c6769b6b50a2dc282811b79
+    .agents/skills/lingui-best-practices/references/configuration.md: sha256:228082b4ad320318bffc442db62d4735ac5778982c6c401538f3fa59d0160b66
+    .agents/skills/lingui-best-practices/references/integration-recipes.md: sha256:ad739a61ca5566ccf21011c1e2bab3fb5435eea61c472c7463089ee29b7afee2
+    .agents/skills/lingui-framework-setup/SKILL.md: sha256:8e65591bb48b9a0aff14307f14c79c9da7d7c983d5f5d2b71696b45bba2eca53
+    .agents/skills/lingui-framework-setup/references/nextjs-app-router.md: sha256:8e9490d15fd2c7429e6a6a39feb63b129ca3c068247a4a5eaae9f27d9e1399ba
+    .agents/skills/lingui-framework-setup/references/react-router-remix.md: sha256:5788b3f2fed8f6bb7eb67d7f37acb1be7e98eac722b0a4755d18df195be9e16e
+    .agents/skills/lingui-framework-setup/references/tanstack-start.md: sha256:7697450f203c2da3ed9ed7939b6e3e1fa6985c69e9aacfbb592769fa75137eed
+    .agents/skills/lingui-framework-setup/references/vite-spa.md: sha256:1ed0c29ca0473bd4837f9fa48cef078b80848cd2f99f4aecc43bc6bb7f0b75a8
+    .agents/skills/lingui-framework-setup/references/vue-vite.md: sha256:0666ef30f2d95666fa4b6824a1152f7dd50b8d293d377fa9c2faee04e66599a4
+    .agents/skills/migrate-i18next-to-lingui/SKILL.md: sha256:3ed48dee08be6378559e1e71236704a74442ba8472f5a04e935681b988576e36
+    .agents/skills/migrate-i18next-to-lingui/references/catalog-conversion.md: sha256:254a38d947c81f9c54ba09f798bd2bc0da93be30c406cdb70b4cb148283bd914
+    .agents/skills/migrate-i18next-to-lingui/references/migration-patterns.md: sha256:683422edcb8e88dc6dd33028436c3c1fbd327dcb87a1fd4b00c41cdc5b06e37a
+    .agents/skills/swc-plugin-compatibility/SKILL.md: sha256:0fb8e40f8e9126afac478258e4b722101cb6e906ed5e48fe4a46da920de6607a
+  content_hash: sha256:e9087f336619901614db99338fd902f1aed1c64b5293f4e7ea80610fee98a4c1
+  declared_license: MIT
+- repo_url: pbnicad/telegram-bot-grammy-skill
+  materialization_repo_url: PBnicad/telegram-bot-grammy-skill
+  name: telegram-bot-grammy
+  host: github.com
+  resolved_commit: 3720bde5cf808a53e0b6e2838bce0957b30b050d
+  version: unknown
+  package_type: claude_skill
+  deployed_files:
+  - .agents/skills/telegram-bot-grammy-skill
+  - .agents/skills/telegram-bot-grammy-skill/.gitignore
+  - .agents/skills/telegram-bot-grammy-skill/README.md
+  - .agents/skills/telegram-bot-grammy-skill/SKILL.md
+  - .agents/skills/telegram-bot-grammy-skill/assets/.github/workflows/ci.yml
+  - .agents/skills/telegram-bot-grammy-skill/assets/biome.json
+  - .agents/skills/telegram-bot-grammy-skill/assets/drizzle.config.ts
+  - .agents/skills/telegram-bot-grammy-skill/assets/migrations/0001_init.sql
+  - .agents/skills/telegram-bot-grammy-skill/assets/package.json
+  - .agents/skills/telegram-bot-grammy-skill/assets/pre-commit
+  - .agents/skills/telegram-bot-grammy-skill/assets/src/db/schema.ts
+  - .agents/skills/telegram-bot-grammy-skill/assets/src/index.ts
+  - .agents/skills/telegram-bot-grammy-skill/assets/test/bot.test.ts
+  - .agents/skills/telegram-bot-grammy-skill/assets/tsconfig.json
+  - .agents/skills/telegram-bot-grammy-skill/assets/vitest.config.ts
+  - .agents/skills/telegram-bot-grammy-skill/assets/wrangler.toml
+  deployed_file_hashes:
+    .agents/skills/telegram-bot-grammy-skill/.gitignore: sha256:c4823c0bbee741bac6e7446ccba1389da6cc7c1d2b920c2f7d5f33b520697391
+    .agents/skills/telegram-bot-grammy-skill/README.md: sha256:ed3b22a4d4672da366f16db8b5c672b74d61271882580d15889e0797e31cd408
+    .agents/skills/telegram-bot-grammy-skill/SKILL.md: sha256:525b278ac784ed980c0d5ed40a95fb39413e500a7f678503132938e97f5464a1
+    .agents/skills/telegram-bot-grammy-skill/assets/.github/workflows/ci.yml: sha256:f2835dbed3cb69aa1a4f0d8fe02269ebe1d6ee113d6004e1c31f462cbc25f0f1
+    .agents/skills/telegram-bot-grammy-skill/assets/biome.json: sha256:1957c684eace9631bb9ce4554b003a91161564a5a95550e404d97852b61c2f94
+    .agents/skills/telegram-bot-grammy-skill/assets/drizzle.config.ts: sha256:7fce164d2f6550cb6f8499ef98d5956d3ea4a8a4887796162725f6fefb54d7b5
+    .agents/skills/telegram-bot-grammy-skill/assets/migrations/0001_init.sql: sha256:b9d60a5ad2527e1e7e8c1ffd4d9087ef66721c9e4e505826131770939dbcb66d
+    .agents/skills/telegram-bot-grammy-skill/assets/package.json: sha256:6af9ee8ccc0896b5ef2eff2d6f22691cfc91d2627cdfefb00d4e0ca10f2278e9
+    .agents/skills/telegram-bot-grammy-skill/assets/pre-commit: sha256:5796de67bb37fb69d0cefdae7f12baa70395d507076a381e6b8d81ddd74f638d
+    .agents/skills/telegram-bot-grammy-skill/assets/src/db/schema.ts: sha256:5159cb5dd913e974715c49ebdedf0ee4e4db787852f4887e2452768abe8e1a81
+    .agents/skills/telegram-bot-grammy-skill/assets/src/index.ts: sha256:3fbf182f26cc7be4a44212a37aa35f71d374093ad0cb7f7fac809c952ace1897
+    .agents/skills/telegram-bot-grammy-skill/assets/test/bot.test.ts: sha256:d5a2b86b86880ebc1951d22b85de6953548b7588c9bd2caaf0ea141781148367
+    .agents/skills/telegram-bot-grammy-skill/assets/tsconfig.json: sha256:eea14b437ee7dc3c13c6681d89433c99c057847652ecff554195ce0efdff18be
+    .agents/skills/telegram-bot-grammy-skill/assets/vitest.config.ts: sha256:5f16a7a11da796e8a60e34efe20017a82bedace38209a105ff3636d963ca4bcf
+    .agents/skills/telegram-bot-grammy-skill/assets/wrangler.toml: sha256:0a50f86f4131a063fcd0be122e61f57225f976dce41d22e98906b7823bbd91b2
+  content_hash: sha256:0cde73e2576a98dbf82e3208813b97fedda77b6117e9d829ff22ac04912b43b9
+deployments:
+- kind: project-relative
+  target: copilot
+  value: .agents/skills/enhanced-message-context
+  runtime: null
+  scope: project
+  owners:
+  - lingui/skills
+  active_owner: lingui/skills
+  content_hash: null
+- kind: project-relative
+  target: copilot
+  value: .agents/skills/enhanced-message-context/SKILL.md
+  runtime: null
+  scope: project
+  owners:
+  - lingui/skills
+  active_owner: lingui/skills
+  content_hash: sha256:fbf1ae9128abd041369982dd3b09c58bdaa95264cdafc2050eacafadc13f7925
+- kind: project-relative
+  target: copilot
+  value: .agents/skills/find-unwrapped-strings
+  runtime: null
+  scope: project
+  owners:
+  - lingui/skills
+  active_owner: lingui/skills
+  content_hash: null
+- kind: project-relative
+  target: copilot
+  value: .agents/skills/find-unwrapped-strings/SKILL.md
+  runtime: null
+  scope: project
+  owners:
+  - lingui/skills
+  active_owner: lingui/skills
+  content_hash: sha256:1f8b8e2baef5976ece84aa2f8d68179188f8cecbd944069f40cf63902a621389
+- kind: project-relative
+  target: copilot
+  value: .agents/skills/find-unwrapped-strings/references/eslint-config.md
+  runtime: null
+  scope: project
+  owners:
+  - lingui/skills
+  active_owner: lingui/skills
+  content_hash: sha256:1c02dd0f43de817dd0b509c18456daae36ad56e5443c7f723bb3dc7e5aac29bd
+- kind: project-relative
+  target: copilot
+  value: .agents/skills/lingui-best-practices
+  runtime: null
+  scope: project
+  owners:
+  - lingui/skills
+  active_owner: lingui/skills
+  content_hash: null
+- kind: project-relative
+  target: copilot
+  value: .agents/skills/lingui-best-practices/SKILL.md
+  runtime: null
+  scope: project
+  owners:
+  - lingui/skills
+  active_owner: lingui/skills
+  content_hash: sha256:7eb781d094d8c6bab0c8d38e859dfb699dc015bfa03792862ed5f2dd9c669b3e
+- kind: project-relative
+  target: copilot
+  value: .agents/skills/lingui-best-practices/references/common-mistakes.md
+  runtime: null
+  scope: project
+  owners:
+  - lingui/skills
+  active_owner: lingui/skills
+  content_hash: sha256:0040fb3762ad1e8e1460d985ddb99ac6aff58c733c6769b6b50a2dc282811b79
+- kind: project-relative
+  target: copilot
+  value: .agents/skills/lingui-best-practices/references/configuration.md
+  runtime: null
+  scope: project
+  owners:
+  - lingui/skills
+  active_owner: lingui/skills
+  content_hash: sha256:228082b4ad320318bffc442db62d4735ac5778982c6c401538f3fa59d0160b66
+- kind: project-relative
+  target: copilot
+  value: .agents/skills/lingui-best-practices/references/integration-recipes.md
+  runtime: null
+  scope: project
+  owners:
+  - lingui/skills
+  active_owner: lingui/skills
+  content_hash: sha256:ad739a61ca5566ccf21011c1e2bab3fb5435eea61c472c7463089ee29b7afee2
+- kind: project-relative
+  target: copilot
+  value: .agents/skills/lingui-framework-setup
+  runtime: null
+  scope: project
+  owners:
+  - lingui/skills
+  active_owner: lingui/skills
+  content_hash: null
+- kind: project-relative
+  target: copilot
+  value: .agents/skills/lingui-framework-setup/SKILL.md
+  runtime: null
+  scope: project
+  owners:
+  - lingui/skills
+  active_owner: lingui/skills
+  content_hash: sha256:8e65591bb48b9a0aff14307f14c79c9da7d7c983d5f5d2b71696b45bba2eca53
+- kind: project-relative
+  target: copilot
+  value: .agents/skills/lingui-framework-setup/references/nextjs-app-router.md
+  runtime: null
+  scope: project
+  owners:
+  - lingui/skills
+  active_owner: lingui/skills
+  content_hash: sha256:8e9490d15fd2c7429e6a6a39feb63b129ca3c068247a4a5eaae9f27d9e1399ba
+- kind: project-relative
+  target: copilot
+  value: .agents/skills/lingui-framework-setup/references/react-router-remix.md
+  runtime: null
+  scope: project
+  owners:
+  - lingui/skills
+  active_owner: lingui/skills
+  content_hash: sha256:5788b3f2fed8f6bb7eb67d7f37acb1be7e98eac722b0a4755d18df195be9e16e
+- kind: project-relative
+  target: copilot
+  value: .agents/skills/lingui-framework-setup/references/tanstack-start.md
+  runtime: null
+  scope: project
+  owners:
+  - lingui/skills
+  active_owner: lingui/skills
+  content_hash: sha256:7697450f203c2da3ed9ed7939b6e3e1fa6985c69e9aacfbb592769fa75137eed
+- kind: project-relative
+  target: copilot
+  value: .agents/skills/lingui-framework-setup/references/vite-spa.md
+  runtime: null
+  scope: project
+  owners:
+  - lingui/skills
+  active_owner: lingui/skills
+  content_hash: sha256:1ed0c29ca0473bd4837f9fa48cef078b80848cd2f99f4aecc43bc6bb7f0b75a8
+- kind: project-relative
+  target: copilot
+  value: .agents/skills/lingui-framework-setup/references/vue-vite.md
+  runtime: null
+  scope: project
+  owners:
+  - lingui/skills
+  active_owner: lingui/skills
+  content_hash: sha256:0666ef30f2d95666fa4b6824a1152f7dd50b8d293d377fa9c2faee04e66599a4
+- kind: project-relative
+  target: copilot
+  value: .agents/skills/migrate-i18next-to-lingui
+  runtime: null
+  scope: project
+  owners:
+  - lingui/skills
+  active_owner: lingui/skills
+  content_hash: null
+- kind: project-relative
+  target: copilot
+  value: .agents/skills/migrate-i18next-to-lingui/SKILL.md
+  runtime: null
+  scope: project
+  owners:
+  - lingui/skills
+  active_owner: lingui/skills
+  content_hash: sha256:3ed48dee08be6378559e1e71236704a74442ba8472f5a04e935681b988576e36
+- kind: project-relative
+  target: copilot
+  value: .agents/skills/migrate-i18next-to-lingui/references/catalog-conversion.md
+  runtime: null
+  scope: project
+  owners:
+  - lingui/skills
+  active_owner: lingui/skills
+  content_hash: sha256:254a38d947c81f9c54ba09f798bd2bc0da93be30c406cdb70b4cb148283bd914
+- kind: project-relative
+  target: copilot
+  value: .agents/skills/migrate-i18next-to-lingui/references/migration-patterns.md
+  runtime: null
+  scope: project
+  owners:
+  - lingui/skills
+  active_owner: lingui/skills
+  content_hash: sha256:683422edcb8e88dc6dd33028436c3c1fbd327dcb87a1fd4b00c41cdc5b06e37a
+- kind: project-relative
+  target: copilot
+  value: .agents/skills/swc-plugin-compatibility
+  runtime: null
+  scope: project
+  owners:
+  - lingui/skills
+  active_owner: lingui/skills
+  content_hash: null
+- kind: project-relative
+  target: copilot
+  value: .agents/skills/swc-plugin-compatibility/SKILL.md
+  runtime: null
+  scope: project
+  owners:
+  - lingui/skills
+  active_owner: lingui/skills
+  content_hash: sha256:0fb8e40f8e9126afac478258e4b722101cb6e906ed5e48fe4a46da920de6607a
+- kind: project-relative
+  target: copilot
+  value: .agents/skills/telegram-bot-grammy-skill
+  runtime: null
+  scope: project
+  owners:
+  - pbnicad/telegram-bot-grammy-skill
+  active_owner: pbnicad/telegram-bot-grammy-skill
+  content_hash: null
+- kind: project-relative
+  target: copilot
+  value: .agents/skills/telegram-bot-grammy-skill/.gitignore
+  runtime: null
+  scope: project
+  owners:
+  - pbnicad/telegram-bot-grammy-skill
+  active_owner: pbnicad/telegram-bot-grammy-skill
+  content_hash: sha256:c4823c0bbee741bac6e7446ccba1389da6cc7c1d2b920c2f7d5f33b520697391
+- kind: project-relative
+  target: copilot
+  value: .agents/skills/telegram-bot-grammy-skill/README.md
+  runtime: null
+  scope: project
+  owners:
+  - pbnicad/telegram-bot-grammy-skill
+  active_owner: pbnicad/telegram-bot-grammy-skill
+  content_hash: sha256:ed3b22a4d4672da366f16db8b5c672b74d61271882580d15889e0797e31cd408
+- kind: project-relative
+  target: copilot
+  value: .agents/skills/telegram-bot-grammy-skill/SKILL.md
+  runtime: null
+  scope: project
+  owners:
+  - pbnicad/telegram-bot-grammy-skill
+  active_owner: pbnicad/telegram-bot-grammy-skill
+  content_hash: sha256:525b278ac784ed980c0d5ed40a95fb39413e500a7f678503132938e97f5464a1
+- kind: project-relative
+  target: copilot
+  value: .agents/skills/telegram-bot-grammy-skill/assets/.github/workflows/ci.yml
+  runtime: null
+  scope: project
+  owners:
+  - pbnicad/telegram-bot-grammy-skill
+  active_owner: pbnicad/telegram-bot-grammy-skill
+  content_hash: sha256:f2835dbed3cb69aa1a4f0d8fe02269ebe1d6ee113d6004e1c31f462cbc25f0f1
+- kind: project-relative
+  target: copilot
+  value: .agents/skills/telegram-bot-grammy-skill/assets/biome.json
+  runtime: null
+  scope: project
+  owners:
+  - pbnicad/telegram-bot-grammy-skill
+  active_owner: pbnicad/telegram-bot-grammy-skill
+  content_hash: sha256:1957c684eace9631bb9ce4554b003a91161564a5a95550e404d97852b61c2f94
+- kind: project-relative
+  target: copilot
+  value: .agents/skills/telegram-bot-grammy-skill/assets/drizzle.config.ts
+  runtime: null
+  scope: project
+  owners:
+  - pbnicad/telegram-bot-grammy-skill
+  active_owner: pbnicad/telegram-bot-grammy-skill
+  content_hash: sha256:7fce164d2f6550cb6f8499ef98d5956d3ea4a8a4887796162725f6fefb54d7b5
+- kind: project-relative
+  target: copilot
+  value: .agents/skills/telegram-bot-grammy-skill/assets/migrations/0001_init.sql
+  runtime: null
+  scope: project
+  owners:
+  - pbnicad/telegram-bot-grammy-skill
+  active_owner: pbnicad/telegram-bot-grammy-skill
+  content_hash: sha256:b9d60a5ad2527e1e7e8c1ffd4d9087ef66721c9e4e505826131770939dbcb66d
+- kind: project-relative
+  target: copilot
+  value: .agents/skills/telegram-bot-grammy-skill/assets/package.json
+  runtime: null
+  scope: project
+  owners:
+  - pbnicad/telegram-bot-grammy-skill
+  active_owner: pbnicad/telegram-bot-grammy-skill
+  content_hash: sha256:6af9ee8ccc0896b5ef2eff2d6f22691cfc91d2627cdfefb00d4e0ca10f2278e9
+- kind: project-relative
+  target: copilot
+  value: .agents/skills/telegram-bot-grammy-skill/assets/pre-commit
+  runtime: null
+  scope: project
+  owners:
+  - pbnicad/telegram-bot-grammy-skill
+  active_owner: pbnicad/telegram-bot-grammy-skill
+  content_hash: sha256:5796de67bb37fb69d0cefdae7f12baa70395d507076a381e6b8d81ddd74f638d
+- kind: project-relative
+  target: copilot
+  value: .agents/skills/telegram-bot-grammy-skill/assets/src/db/schema.ts
+  runtime: null
+  scope: project
+  owners:
+  - pbnicad/telegram-bot-grammy-skill
+  active_owner: pbnicad/telegram-bot-grammy-skill
+  content_hash: sha256:5159cb5dd913e974715c49ebdedf0ee4e4db787852f4887e2452768abe8e1a81
+- kind: project-relative
+  target: copilot
+  value: .agents/skills/telegram-bot-grammy-skill/assets/src/index.ts
+  runtime: null
+  scope: project
+  owners:
+  - pbnicad/telegram-bot-grammy-skill
+  active_owner: pbnicad/telegram-bot-grammy-skill
+  content_hash: sha256:3fbf182f26cc7be4a44212a37aa35f71d374093ad0cb7f7fac809c952ace1897
+- kind: project-relative
+  target: copilot
+  value: .agents/skills/telegram-bot-grammy-skill/assets/test/bot.test.ts
+  runtime: null
+  scope: project
+  owners:
+  - pbnicad/telegram-bot-grammy-skill
+  active_owner: pbnicad/telegram-bot-grammy-skill
+  content_hash: sha256:d5a2b86b86880ebc1951d22b85de6953548b7588c9bd2caaf0ea141781148367
+- kind: project-relative
+  target: copilot
+  value: .agents/skills/telegram-bot-grammy-skill/assets/tsconfig.json
+  runtime: null
+  scope: project
+  owners:
+  - pbnicad/telegram-bot-grammy-skill
+  active_owner: pbnicad/telegram-bot-grammy-skill
+  content_hash: sha256:eea14b437ee7dc3c13c6681d89433c99c057847652ecff554195ce0efdff18be
+- kind: project-relative
+  target: copilot
+  value: .agents/skills/telegram-bot-grammy-skill/assets/vitest.config.ts
+  runtime: null
+  scope: project
+  owners:
+  - pbnicad/telegram-bot-grammy-skill
+  active_owner: pbnicad/telegram-bot-grammy-skill
+  content_hash: sha256:5f16a7a11da796e8a60e34efe20017a82bedace38209a105ff3636d963ca4bcf
+- kind: project-relative
+  target: copilot
+  value: .agents/skills/telegram-bot-grammy-skill/assets/wrangler.toml
+  runtime: null
+  scope: project
+  owners:
+  - pbnicad/telegram-bot-grammy-skill
+  active_owner: pbnicad/telegram-bot-grammy-skill
+  content_hash: sha256:0a50f86f4131a063fcd0be122e61f57225f976dce41d22e98906b7823bbd91b2
