@@ -76,7 +76,7 @@ describe("/start (GrammY API transformer)", () => {
       text: t({
         message: `When moderators forward offtopic from the main chat to the helper chat, I rebuild it as a thread and leave a link behind.
 
-Operators: run /pair source and /pair target in the groups, then check /status.
+Operators: run /pair source and /pair target in the groups, or /pair forum in a forum group, then check /status.
 Guide: ${operatorGuideUrl}`,
       }),
     });

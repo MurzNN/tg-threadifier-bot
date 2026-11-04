@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import type { StoredMessage } from "../../src/db/messages.js";
-import { matchForward, readForwardOrigin } from "../../src/bot/relocate/match.js";
+import { forumTopicMatch, matchForward, readForwardOrigin } from "../../src/bot/relocate/match.js";
 
 const SOURCE = -1001234567890;
 
@@ -15,6 +15,7 @@ function stored(partial: Partial<StoredMessage> = {}): StoredMessage {
     caption: null,
     contentFingerprint: "fp",
     replyToMessageId: null,
+    topicId: null,
     forwardOrigin: null,
     raw: null,
     ...partial,
@@ -146,5 +147,22 @@ describe("matchForward", () => {
       candidates: [message],
     });
     expect(result).toEqual({ ok: true, message });
+  });
+});
+
+describe("forumTopicMatch", () => {
+  it("accepts one source topic that differs from the target topic", () => {
+    expect(forumTopicMatch({ sourceTopicIds: [10, 10], targetTopicId: 20 })).toBeNull();
+  });
+
+  it("rejects a bundle that stays in the same topic", () => {
+    expect(forumTopicMatch({ sourceTopicIds: [null], targetTopicId: null })).toBe("same_topic");
+    expect(forumTopicMatch({ sourceTopicIds: [10], targetTopicId: 10 })).toBe("same_topic");
+  });
+
+  it("rejects a bundle that spans topics", () => {
+    expect(forumTopicMatch({ sourceTopicIds: [10, 11], targetTopicId: 20 })).toBe(
+      "mixed_topics",
+    );
   });
 });

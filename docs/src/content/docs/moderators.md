@@ -30,16 +30,27 @@ After you create or attach a thread, the bot:
 
 You do not need to hand-edit links or re-forward messages one by one.
 
+## Forum topics
+
+When an operator has run `/pair forum` in a group with topics:
+
+1. Select the messages in one topic.
+2. Forward them into a **different** topic in the same group.
+3. Confirm in that destination topic, the same way as in a helper chat.
+
+The header and the copied replies stay in the destination topic. The redirect notice is posted back in the topic the messages came from, and it links to a thread in the other topic. Forwarding inside a single topic, or mixing messages from two origin topics, does not delete anything.
+
 ## Tips
 
-- Forward from the **linked** main chat into the **linked** helper chat. Unrelated forwards are ignored for relocate.
+- Forward from the **linked** main chat into the **linked** helper chat, or from one topic to another in a forum that uses `/pair forum`. Unrelated forwards are ignored for relocate.
+- You need Telegram’s **delete messages** right in the chat the originals will leave. The owner has it. An administrator has it only when that permission is on. Without it the bot ignores the forward. If the right is removed before you confirm, nothing is deleted.
 - A single message is enough. After you confirm, the bot still creates a thread, cleans up, and posts the notice.
 - If the bot cannot match your forward to stored history, it should **not** delete anything and should tell you in the helper chat. Try again after the bot has been in both chats long enough to see the messages, or ask an operator to check pairing and rights.
 - If the bot lacks delete or post rights, relocate may stop before destructive steps. An operator needs to fix permissions.
 
 ## Keep the helper chat for moderation
 
-Anyone who can forward messages from the main chat into the helper chat can start a relocate. Keep the helper chat limited to moderators (or another trusted group), not the whole community, unless that is intentional.
+Starting a relocate requires the right to delete messages in the main chat, plus the ability to forward into the helper chat (or into another topic, in forum mode). Keep the helper chat limited to moderators (or another trusted group), not the whole community, unless that is intentional.
 
 ## Language
 

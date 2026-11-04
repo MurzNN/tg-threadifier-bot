@@ -20,8 +20,9 @@ Boilerplate for how we branch, commit, and open PRs. Keep changes reviewable and
 
 **Practices:**
 
-- Branch from up-to-date `main`; open a PR early if the work is multi-commit.
-- Prefer **small PRs** (one concern). Split large roadmap items rather than mega-merges.
+- Every feature and every fix is implemented on its own short-lived branch off up-to-date `main` (`feat/<short-topic>` or `fix/<short-topic>`, using the table above). A docs-only change uses `docs/`. A test-only change uses `test/`.
+- That branch is not merged by pushing to `main`. It goes through a GitHub pull request, and CI (unit tests and the emulator integration) must pass.
+- One branch is one concern. Prefer **small PRs**. Split large roadmap items rather than mega-merges.
 - Delete the branch after merge.
 - Avoid long-lived feature branches and gitflow-style `develop` unless the team explicitly adopts them later.
 - Do not commit secrets (`.env`, session files, tokens). Use `.env.example` and secret stores for Test DC E2E credentials — see [testing.md](testing.md).

@@ -18,6 +18,8 @@ English default (wording may differ if the chat uses another language or a custo
 
 Follow the link in the notice to keep talking in the right place.
 
+In a **forum** that uses forum mode, the same thing happens between topics. The messages leave one topic, the notice stays there, and the link opens a thread in the topic the moderator forwarded into.
+
 ## In the helper chat
 
 Relocated digressions become a **reply thread**:
@@ -38,9 +40,9 @@ A later update will prompt you when you post a top-level message in the helper c
 | `/start` | Explains what happens when offtopic is moved, with a short setup note and a link to the [operator guide](./operators/). May remember your Telegram language as a personal fallback when the bot supports it. |
 | `/language` | Sets the language for **this chat** (English, Español, Français, or Русский). Another chat keeps its own setting. |
 
-Anyone who can send messages can also **read** `/pair` or `/status` to see how this chat is linked. In a private chat those commands list only the pairs you configured. Changing pairs (`/pair source`, `/pair target`, `/unpair`) is for admins — see [For operators](./operators/). `/unpair` deletes the admin’s own pairs for that chat.
+Anyone who can send messages can also **read** `/pair` or `/status` to see how this chat is linked. In a private chat those commands list only the pairs you configured. A forum pair is shown as forum mode. Changing pairs (`/pair source`, `/pair target`, `/pair forum`, `/unpair`) is for admins — see [For operators](./operators/). `/unpair` deletes the admin’s own pairs for that chat.
 
 ## What you do not do
 
 - You do not open a Mini App or edit bot templates (that is for operators).
-- You do not start a relocate yourself — that begins only when a moderator forwards messages from the main chat into the helper chat.
+- You do not start a relocate yourself — that begins only when someone who can delete messages in the main chat forwards them into the helper chat, or from one forum topic into another.

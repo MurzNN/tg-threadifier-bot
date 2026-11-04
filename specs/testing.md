@@ -50,7 +50,7 @@ M0 sample: `tests/unit/start.test.ts` records `sendMessage` for `/start` against
 
 Command handlers: `tests/unit/pair.test.ts`. It uses in-memory PGlite from `createTestDb()` (`tests/helpers/db.ts`), `createBot` with `botInfo` set, an API transformer that records outgoing calls, and `bot.handleUpdate` for group and private updates. Assert `sendMessage` text with the same `t` template the command uses. Cover enabling a pair while another enabled row already owns the same target (siblings must soft-disable). Cover a second user pairing the same source and target (the reply is an error and the row stays) and `/unpair` deleting only the caller's rows. For a slash-command change, run that file before `nub run test`.
 
-Flow A relocate (`tests/unit/relocate.test.ts`) also covers a legacy two-enabled-pairs-on-one-target case: preferred lookup misses, fallback pair matches, job completes. Chat migration (`tests/unit/chatMigration.test.ts`) covers remap collisions that would duplicate `(source, target)`.
+Flow A relocate (`tests/unit/relocate.test.ts`) also covers a legacy two-enabled-pairs-on-one-target case: preferred lookup misses, fallback pair matches, job completes. It covers forum topic placement (`message_thread_id` on sends, notice in the origin topic, same-topic and mixed-topic failures, attach limited to the same topic) and the delete-messages gate for forum and cross-group pairs. Chat migration (`tests/unit/chatMigration.test.ts`) covers remap collisions that would duplicate `(source, target)`. `tests/unit/pair.test.ts` covers `/pair forum`. `tests/unit/links.test.ts` covers topic link forms. `tests/unit/ingest.test.ts` covers `topic_id` for topic messages, General, and non-forum reply threads.
 
 ---
 
@@ -100,6 +100,15 @@ Reserved phones `99966XYYYY` (login code = DC id repeated) exist for disposable 
 | `MTCUTE_SESSION_MODERATOR` | Persisted mtcute session (moderator) |
 | `MTCUTE_SESSION_MEMBER` | Optional second user for Flow B |
 
+#### Telegram test DC acccounts
+
++9996627771 - Operator
++9996627772 - Moderator 1
++9996627773 - Moderator 2
++9996627781 - User 1
++9996627782 - User 1
++9996627783 - User 1
+
 ### Harness roles
 
 | Role | Implementation |
@@ -126,7 +135,19 @@ Not run in CI. Use a Test DC bot that is an admin in two supergroups (read, post
 5. Expect a header that starts with `Thread:` and contains `?thread=`, the reply copied under that header, the temporary forwards gone, the source messages gone, and a source notice with the same link.
 6. Forward a message the bot never stored. It should stay, with a note that nothing was deleted.
 
-Keep the target chat limited to moderators: any forward into it from the linked source asks for confirmation, and confirming starts a relocate.
+Keep the target chat limited to people who can delete messages in the source chat. A forward from someone without that right is ignored. A forward from someone who has it asks for confirmation, and confirming starts a relocate.
+
+### Manual forum links (Test DC, before release)
+
+Not run in CI. Use one forum supergroup where the bot is an admin with delete rights, topics are enabled, and the acting user can delete messages:
+
+1. `/pair forum` in that group. `/status` should report forum mode.
+2. Post a short root in one topic and forward it into a different topic.
+3. Confirm **Create new thread**. The header and the copy must stay in the destination topic. The notice must appear in the origin topic.
+4. Open the header link. It should be `t.me/c/{path}/{topicId}/{messageId}` (or `t.me/{username}/{topicId}/{messageId}`) with no `?thread=`, and it should open that header.
+5. Repeat a forward into the General topic and from General, and confirm `is_topic_message` on General is what the matcher treats as topic id `null`.
+6. Forward inside a single topic, and forward a mix of two origin topics. Neither case should delete messages.
+7. Forward as a member, and as an administrator without `can_delete_messages`. Nothing should be posted or deleted. Confirm after that right is removed should also delete nothing.
 
 ### Scenario catalog
 
@@ -136,10 +157,12 @@ Keep the target chat limited to moderators: any forward into it from the linked 
 | `A2_single_message` | Flow A edge | Same, single message, after confirmation | Header only; deletes + notice |
 | `A3_match_failure_safe` | Flow A safety | No delete calls after failed match | **No deletes** on real chats; optional moderator error |
 | `A4_ai_title_optional` | Flow A + AI | Mocked LLM success + failure → fallback | Header/notice use AI topic when enabled; truncate when AI fails |
+| `A5_forum_topic_relocate` | Flow A forum | Stub records `message_thread_id` on header, copies, and the origin-topic notice | Header link `t.me/…/{topic}/{msg}` opens the header; copies stay in the destination topic |
 | `B1_loose_pick_thread` | Flow B | Callback → forward/delete recorded | Message in thread; loose + prompt gone |
 | `B2_loose_create_thread` | Flow B | Create path recorded | New thread; loose cleaned |
 | `C1_pair_config` | Flow C | Config API + DB `chat_pairs` | Pair active; ingest uses pair (API/commands first; Mini App UI automation later) |
 | `C2_template_override` | Flow C | Save override; render uses override; reset → Lingui default | Same on Test DC if exercised via API |
+| `C3_pair_forum` | Flow C | `/pair forum` in a forum; reject non-forum and non-admin; soft-disable a cross-group pair on that target | Forum pair active; forwards between topics run `A5` |
 
 Expand later as named scenarios: media/albums, permission failures, concurrent loose messages.
 

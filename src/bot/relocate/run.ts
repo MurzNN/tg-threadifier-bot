@@ -1,9 +1,10 @@
 import type { Api } from "grammy";
 import type { MessageEntity } from "grammy/types";
 
+import { canDeleteMessages } from "../admin.js";
 import { localeForChat } from "../../db/chatSettings.js";
 import type { ChatPair } from "../../db/chatPairs.js";
-import { listEnabledPairsByTarget } from "../../db/chatPairs.js";
+import { isForumPair, listEnabledPairsByTarget } from "../../db/chatPairs.js";
 import type { AppDb } from "../../db/client.js";
 import {
   findMessage,
@@ -20,6 +21,7 @@ import {
 } from "../../db/relocation.js";
 import { withLocale, type Locale } from "../../i18n.js";
 import { buildMessageLink, buildThreadLink, buildUserLink } from "../../lib/links.js";
+import { topicParams } from "../../lib/telegramMessage.js";
 import type { Logger } from "../../logger.js";
 import {
   appendAuthorSuffix,
@@ -28,11 +30,14 @@ import {
   messageSupportsCaption,
   readMessageEntities,
 } from "./authorSuffix.js";
-import { matchForward, type ForwardOriginInfo } from "./match.js";
+import { forumTopicMatch, matchForward, type ForwardOriginInfo } from "./match.js";
 import {
   authorLabel,
   renderDiscardFailed,
+  renderForumSourceNotice,
+  renderForumThreadHeader,
   renderMatchFailure,
+  renderPermissionDenied,
   renderRelocateAborted,
   renderSourceNotice,
   renderThreadHeader,
@@ -43,6 +48,8 @@ import {
 
 export type PendingForward = {
   targetChatId: number;
+  /** Topic the moderator forwarded into. Null is General or a non-forum chat. */
+  targetTopicId: number | null;
   targetTitle: string | null;
   targetUsername: string | null;
   moderatorUserId: number;
@@ -61,6 +68,7 @@ export type RelocateApi = Pick<
   | "copyMessage"
   | "deleteMessage"
   | "deleteMessages"
+  | "getChatMember"
 >;
 
 export type RelocateDeps = {
@@ -101,9 +109,10 @@ async function notify(
   chatId: number,
   text: string,
   logger: Logger,
+  topicId: number | null,
 ): Promise<void> {
   try {
-    await api.sendMessage(chatId, text);
+    await api.sendMessage(chatId, text, topicParams(topicId));
   } catch (err) {
     logger.error({ err, chatId }, "failed to send relocate notice");
   }
@@ -128,12 +137,16 @@ async function emitReply(
   item: ResolvedItem,
   headerMessageId: number,
   locale: Locale,
+  targetTopicId: number | null,
 ): Promise<void> {
   const copied = await api.copyMessage(
     pair.targetChatId,
     pair.sourceChatId,
     item.message.messageId,
-    { reply_parameters: { message_id: headerMessageId } },
+    {
+      reply_parameters: { message_id: headerMessageId },
+      ...topicParams(targetTopicId),
+    },
   );
   const userId = item.message.fromUserId;
   const authorName = withLocale(locale, () => authorLabel(item.authorName));
@@ -173,14 +186,19 @@ async function resolveItem(
   db: AppDb,
   sourceChatId: number,
   item: PendingForward,
+  excludeMessageIds: readonly number[],
 ): Promise<
   | { ok: true; item: ResolvedItem }
   | { ok: false; failure: MatchAttemptFailure }
 > {
   const origin = item.origin;
-  const exact =
+  const exactMessage =
     origin?.type === "channel" && origin.originMessageId != null
       ? await findMessage(db, sourceChatId, origin.originMessageId)
+      : undefined;
+  const exact =
+    exactMessage && !excludeMessageIds.includes(exactMessage.messageId)
+      ? exactMessage
       : undefined;
   const candidates =
     origin && origin.type !== "channel"
@@ -189,6 +207,7 @@ async function resolveItem(
           sourceChatId,
           origin.date,
           item.fingerprint,
+          excludeMessageIds,
         )
       : [];
   const matched = matchForward({
@@ -233,13 +252,37 @@ async function resolveBatchAgainstPair(
 > {
   const resolved: ResolvedItem[] = [];
   const failures: MatchAttemptFailure[] = [];
+  const excludeMessageIds = items.map((item) => item.triggerMessageId);
   for (const item of items) {
-    const result = await resolveItem(db, pair.sourceChatId, item);
+    const result = await resolveItem(db, pair.sourceChatId, item, excludeMessageIds);
     if (result.ok) resolved.push(result.item);
     else failures.push(result.failure);
   }
   if (failures.length > 0 || resolved.length !== items.length) {
     return { ok: false, failures };
+  }
+  if (isForumPair(pair)) {
+    const topicFailure = forumTopicMatch({
+      sourceTopicIds: resolved.map((item) => item.message.topicId),
+      targetTopicId: items[0]?.targetTopicId ?? null,
+    });
+    if (topicFailure) {
+      const head = items[0];
+      return {
+        ok: false,
+        failures: [
+          {
+            triggerMessageId: head?.triggerMessageId ?? 0,
+            reason: topicFailure,
+            sourceChatId: pair.sourceChatId,
+            originDate: head?.origin?.date ?? null,
+            fingerprint: head?.fingerprint ?? "",
+            candidateCount: resolved.length,
+            originType: head?.origin?.type ?? null,
+          },
+        ],
+      };
+    }
   }
   return { ok: true, resolved };
 }
@@ -250,6 +293,10 @@ export type ResolvedRelocation = {
   resolved: ResolvedItem[];
   /** Auto title from the earliest message, in the target chat's locale. */
   threadTitle: string;
+  /** Topic the header is posted in. Null is General or a non-forum chat. */
+  targetTopicId: number | null;
+  /** Topic of the matched root. Null is General or a non-forum chat. */
+  sourceTopicId: number | null;
 };
 
 export type ExecuteRelocationOptions = {
@@ -359,7 +406,14 @@ export async function matchRelocation(
 
   return {
     ok: true,
-    plan: { pair, items, resolved, threadTitle },
+    plan: {
+      pair,
+      items,
+      resolved,
+      threadTitle,
+      targetTopicId: first.targetTopicId,
+      sourceTopicId: resolved[0]?.message.topicId ?? null,
+    },
   };
 }
 
@@ -380,6 +434,7 @@ export async function failRelocation(
       sourceChatId: pair.sourceChatId,
       targetChatId: pair.targetChatId,
       triggerMessageIds: items.map((item) => item.triggerMessageId),
+      targetTopicId: first.targetTopicId,
       reason: "match_failed",
     },
   });
@@ -389,6 +444,7 @@ export async function failRelocation(
     pair.targetChatId,
     withLocale(targetLocale, () => renderMatchFailure()),
     logger,
+    first.targetTopicId,
   );
 }
 
@@ -407,6 +463,18 @@ export async function executeRelocation(
   const { db, api, logger } = deps;
   const { pair, resolved } = plan;
 
+  if (!(await canDeleteMessages(api, pair.sourceChatId, first.moderatorUserId, { fresh: true }))) {
+    const targetLocale = await localeForChat(db, pair.targetChatId);
+    await notify(
+      api,
+      pair.targetChatId,
+      withLocale(targetLocale, () => renderPermissionDenied()),
+      logger,
+      plan.targetTopicId,
+    );
+    return;
+  }
+
   await deleteQuiet(api, logger, pair.targetChatId, options.promptMessageId);
   await deleteQuiet(api, logger, pair.targetChatId, options.titleMessageId);
 
@@ -414,6 +482,8 @@ export async function executeRelocation(
     moderatorUserId: first.moderatorUserId,
     sourceChatId: pair.sourceChatId,
     targetChatId: pair.targetChatId,
+    sourceTopicId: plan.sourceTopicId,
+    targetTopicId: plan.targetTopicId,
     items: resolved.map((item) => ({
       sourceMessageId: item.message.messageId,
       triggerMessageId: item.triggerMessageId,
@@ -451,6 +521,7 @@ export async function executeRelocation(
       pair.targetChatId,
       withLocale(targetLocale, () => renderRelocateAborted(phase)),
       logger,
+      plan.targetTopicId,
     );
   }
 }
@@ -464,6 +535,17 @@ export async function discardRelocation(
   const first = plan.items[0];
   if (!first) return false;
   const { db, api, logger } = deps;
+  if (!(await canDeleteMessages(api, plan.pair.sourceChatId, first.moderatorUserId, { fresh: true }))) {
+    const targetLocale = await localeForChat(db, plan.pair.targetChatId);
+    await notify(
+      api,
+      plan.pair.targetChatId,
+      withLocale(targetLocale, () => renderPermissionDenied()),
+      logger,
+      plan.targetTopicId,
+    );
+    return false;
+  }
   const ids = plan.resolved.map((item) => item.triggerMessageId);
   if (promptMessageId != null) ids.push(promptMessageId);
   try {
@@ -476,6 +558,7 @@ export async function discardRelocation(
       plan.pair.targetChatId,
       withLocale(targetLocale, () => renderDiscardFailed()),
       logger,
+      plan.targetTopicId,
     );
     return false;
   }
@@ -486,6 +569,8 @@ export async function discardRelocation(
       moderatorUserId: first.moderatorUserId,
       sourceChatId: plan.pair.sourceChatId,
       targetChatId: plan.pair.targetChatId,
+      sourceTopicId: plan.sourceTopicId,
+      targetTopicId: plan.targetTopicId,
       triggerMessageIds: plan.resolved.map((item) => item.triggerMessageId),
       reason: "cancelled",
     },
@@ -546,11 +631,19 @@ async function postThread(
   );
   const headerAuthor = withLocale(targetLocale, () => authorLabel(root.authorName));
   const noticeAuthor = withLocale(sourceLocale, () => authorLabel(root.authorName));
+  const forum = isForumPair(pair);
   const linkToSourceChat = buildMessageLink({
     chatId: pair.sourceChatId,
     messageId: root.message.messageId,
     username: pair.sourceUsernameOrPath,
+    topicId: plan.sourceTopicId,
   });
+  const threadLinkInput = {
+    chatId: pair.targetChatId,
+    username: first.targetUsername,
+    topicId: plan.targetTopicId,
+    forum,
+  };
 
   const existing = options.existingThread;
   let headerMessageId: number;
@@ -559,11 +652,7 @@ async function postThread(
 
   if (existing) {
     headerMessageId = existing.rootMessageId;
-    threadLink = buildThreadLink({
-      chatId: pair.targetChatId,
-      messageId: headerMessageId,
-      username: first.targetUsername,
-    });
+    threadLink = buildThreadLink({ ...threadLinkInput, messageId: headerMessageId });
     noticeThreadTitle = existing.threadTitle;
     payload.headerMessageId = headerMessageId;
     payload.threadLink = threadLink;
@@ -576,25 +665,26 @@ async function postThread(
       sourceChatName: sourceName,
       threadLink: "https://t.me",
     };
+    const renderHeader = (threadLink: string) =>
+      forum
+        ? renderForumThreadHeader({ ...headerVars, threadLink })
+        : renderThreadHeader({ ...headerVars, threadLink });
     const sent = await api.sendMessage(
       pair.targetChatId,
-      withLocale(targetLocale, () => renderThreadHeader(headerVars)),
-      HTML_OPTIONS,
+      withLocale(targetLocale, () => renderHeader(headerVars.threadLink)),
+      { ...HTML_OPTIONS, ...topicParams(plan.targetTopicId) },
     );
     headerMessageId = sent.message_id;
-    threadLink = buildThreadLink({
-      chatId: pair.targetChatId,
-      messageId: headerMessageId,
-      username: first.targetUsername,
-    });
+    threadLink = buildThreadLink({ ...threadLinkInput, messageId: headerMessageId });
     await api.editMessageText(
       pair.targetChatId,
       headerMessageId,
-      withLocale(targetLocale, () => renderThreadHeader({ ...headerVars, threadLink })),
+      withLocale(targetLocale, () => renderHeader(threadLink)),
       HTML_OPTIONS,
     );
     await insertThread(db, {
       targetChatId: pair.targetChatId,
+      targetTopicId: plan.targetTopicId,
       rootMessageId: headerMessageId,
       threadTitle: titles.threadTitle,
       titleSource: titles.titleSource,
@@ -612,7 +702,7 @@ async function postThread(
   // the root, into the existing reply thread.
   const copies = existing ? resolved : resolved.slice(1);
   for (const item of copies) {
-    await emitReply(api, pair, item, headerMessageId, targetLocale);
+    await emitReply(api, pair, item, headerMessageId, targetLocale, plan.targetTopicId);
   }
   setPhase("populated");
   await updateRelocationJob(db, jobId, "populated", payload);
@@ -636,15 +726,22 @@ async function postThread(
   await api.sendMessage(
     pair.sourceChatId,
     withLocale(sourceLocale, () =>
-      renderSourceNotice({
-        threadTitle: noticeThreadTitle,
-        linkToUser,
-        userDisplayName: noticeAuthor,
-        linkToTargetChatThread: threadLink,
-        targetChatName: targetName,
-      }),
+      forum
+        ? renderForumSourceNotice({
+            threadTitle: noticeThreadTitle,
+            linkToUser,
+            userDisplayName: noticeAuthor,
+            linkToTargetChatThread: threadLink,
+          })
+        : renderSourceNotice({
+            threadTitle: noticeThreadTitle,
+            linkToUser,
+            userDisplayName: noticeAuthor,
+            linkToTargetChatThread: threadLink,
+            targetChatName: targetName,
+          }),
     ),
-    HTML_OPTIONS,
+    { ...HTML_OPTIONS, ...topicParams(plan.sourceTopicId) },
   );
   setPhase("completed");
   await updateRelocationJob(db, jobId, "completed", payload);

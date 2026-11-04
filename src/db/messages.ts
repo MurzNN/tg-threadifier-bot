@@ -1,4 +1,4 @@
-import { and, eq, sql } from "drizzle-orm";
+import { and, eq, notInArray, sql } from "drizzle-orm";
 
 import type { AppDb } from "./client.js";
 import { messages } from "./schema.js";
@@ -12,6 +12,8 @@ export type StoredMessage = {
   caption: string | null;
   contentFingerprint: string | null;
   replyToMessageId: number | null;
+  /** Forum topic id. Null is General, or a chat that is not a forum. */
+  topicId: number | null;
   forwardOrigin: string | null;
   raw: unknown;
 };
@@ -26,6 +28,7 @@ function mapMessage(row: typeof messages.$inferSelect): StoredMessage {
     caption: row.caption,
     contentFingerprint: row.contentFingerprint,
     replyToMessageId: row.replyToMessageId,
+    topicId: row.topicId,
     forwardOrigin: row.forwardOrigin,
     raw: row.raw,
   };
@@ -46,6 +49,7 @@ export async function upsertMessage(
       caption: message.caption,
       contentFingerprint: message.contentFingerprint,
       replyToMessageId: message.replyToMessageId,
+      topicId: message.topicId,
       forwardOrigin: message.forwardOrigin,
       raw: message.raw,
     })
@@ -58,6 +62,7 @@ export async function upsertMessage(
         caption: message.caption,
         contentFingerprint: message.contentFingerprint,
         replyToMessageId: message.replyToMessageId,
+        topicId: message.topicId,
         forwardOrigin: message.forwardOrigin,
         raw: message.raw,
       },
@@ -83,6 +88,7 @@ export async function findMessagesByContent(
   chatId: number,
   date: number,
   contentFingerprint: string,
+  excludeMessageIds: readonly number[] = [],
 ): Promise<StoredMessage[]> {
   const rows = await db
     .select()
@@ -92,6 +98,9 @@ export async function findMessagesByContent(
         eq(messages.chatId, chatId),
         eq(messages.date, date),
         eq(messages.contentFingerprint, contentFingerprint),
+        excludeMessageIds.length > 0
+          ? notInArray(messages.messageId, [...excludeMessageIds])
+          : undefined,
       ),
     );
   return rows.map(mapMessage);

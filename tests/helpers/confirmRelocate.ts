@@ -32,7 +32,7 @@ export async function pressRelocate(
   bot: Bot,
   calls: ApiCall[],
   action: "new" | "title" | "attach" | "drop" | "pick",
-  options?: { moderatorId?: number; data?: string },
+  options?: { moderatorId?: number; data?: string; chatId?: number },
 ): Promise<void> {
   const data = options?.data ?? relocateCallbacks(calls, action).at(-1);
   if (!data) throw new Error(`no reloc:${action} button`);
@@ -48,7 +48,11 @@ export async function pressRelocate(
       message: {
         message_id: 1,
         date: 1_700_000_900,
-        chat: { id: TARGET_CHAT_ID, type: "supergroup", title: "Helper" },
+        chat: {
+          id: options?.chatId ?? TARGET_CHAT_ID,
+          type: "supergroup",
+          title: "Helper",
+        },
         text: "confirm",
       },
     },

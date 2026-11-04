@@ -113,6 +113,7 @@ Moved earlier so Flow A/B work can be exercised on a real cluster / Test DC with
 
 - [ ] Optional AI thread titles (pluggable LLM; scenario `A4`; fallback already in M2)
 - [ ] Multiple target chats / topic-specific helpers per source
+- [x] Forum Mode: `/pair forum` relocates between topics in one forum group (header in the destination topic; scenarios `A5_forum_topic_relocate`, `C3_pair_forum`). Every relocate, including cross-group, requires delete-messages rights in the source chat.
 - [ ] Multi-tenant hosting (many unrelated communities on one deployment)
 - [x] Moderator preview / confirm before deletes (helper-chat confirmation: create, custom title, attach to a recent thread, or delete the grouped forwards)
 - [x] Lingui catalogs for `es`, `fr`, and `ru` (loaded with `en`; default locale stays `en`)

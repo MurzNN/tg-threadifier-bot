@@ -1,11 +1,16 @@
 import type { ApiCallFn, Bot } from "grammy";
+import type { ChatMember } from "grammy/types";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
+import { clearCanDeleteMessagesCache } from "../../src/bot/admin.js";
 import { createBot, flushRelocate, stopRelocate } from "../../src/bot.js";
 import { RelocationDraftStore } from "../../src/bot/relocate/drafts.js";
 import {
   renderConfirmPrompt,
+  renderForumSourceNotice,
+  renderForumThreadHeader,
   renderMatchFailure,
+  renderPermissionDenied,
   renderPreviewLine,
   renderRelocateAborted,
   resolveRootTitles,
@@ -27,10 +32,14 @@ import {
   REPLY_ONE,
   REPLY_TWO,
   ROOT,
+  FORUM_CHAT_ID,
   SOURCE_CHAT_ID,
+  SOURCE_TOPIC_ID,
   TARGET_CHAT_ID,
+  TARGET_TOPIC_ID,
   deliverCluster,
   forwardUpdate,
+  seedForumPair,
   seedPair,
   sourceUpdate,
   type Original,
@@ -40,15 +49,27 @@ import { createTestDb } from "../helpers/db.js";
 
 const STALE_SOURCE_CHAT_ID = -1005555555555;
 
+const creatorMember = {
+  status: "creator",
+  user: { id: 7, is_bot: false, first_name: "Mod" },
+  is_anonymous: false,
+} as ChatMember;
+
 function installRecorder(
   bot: Bot,
-  options?: { failDelete?: boolean },
+  options?: { failDelete?: boolean; member?: () => ChatMember },
 ): ApiCall[] {
   const calls: ApiCall[] = [];
   let nextId = 799;
   bot.api.config.use(async (_prev, method, payload) => {
     const body = (payload ?? {}) as Record<string, unknown>;
     calls.push({ method, payload: body });
+    if (method === "getChatMember") {
+      return {
+        ok: true,
+        result: options?.member?.() ?? creatorMember,
+      } as Awaited<ReturnType<ApiCallFn>>;
+    }
     if (options?.failDelete && method === "deleteMessages") {
       throw new Error("not enough rights");
     }
@@ -89,10 +110,13 @@ describe("Flow A relocate (API transformer)", () => {
   let bot: Bot;
   let calls: ApiCall[];
   let handle: DbHandle;
+  let member: ChatMember;
 
   beforeEach(async () => {
+    clearCanDeleteMessagesCache();
     handle = await createTestDb();
     await seedPair(handle.db);
+    member = creatorMember;
     const logger = createLogger({ LOG_LEVEL: "silent", NODE_ENV: "test" });
     bot = createBot({
       token: "test:token",
@@ -101,7 +125,7 @@ describe("Flow A relocate (API transformer)", () => {
       batchWindowMs: 60_000,
     });
     bot.botInfo = testBotInfo;
-    calls = installRecorder(bot);
+    calls = installRecorder(bot, { member: () => member });
     await bot.init();
   });
 
@@ -115,8 +139,11 @@ describe("Flow A relocate (API transformer)", () => {
     await pressRelocate(bot, calls, "new");
 
     expect(methodsOf(calls)).toEqual([
+      "getChatMember",
       "sendMessage",
+      "getChatMember",
       "answerCallbackQuery",
+      "getChatMember",
       "deleteMessage",
       "sendMessage",
       "editMessageText",
@@ -156,8 +183,11 @@ describe("Flow A relocate (API transformer)", () => {
     await deliverCluster(bot, [ROOT]);
     await pressRelocate(bot, calls, "new");
     expect(methodsOf(calls)).toEqual([
+      "getChatMember",
       "sendMessage",
+      "getChatMember",
       "answerCallbackQuery",
+      "getChatMember",
       "deleteMessage",
       "sendMessage",
       "editMessageText",
@@ -180,8 +210,10 @@ describe("Flow A relocate (API transformer)", () => {
     );
     await flushRelocate(bot);
 
-    expect(methodsOf(calls)).toEqual(["sendMessage"]);
-    expect(calls[0]?.payload.text).toBe(renderMatchFailure());
+    expect(methodsOf(calls)).toEqual(["getChatMember", "sendMessage"]);
+    expect(calls.find((call) => call.method === "sendMessage")?.payload.text).toBe(
+      renderMatchFailure(),
+    );
     expect(calls.some((call) => call.method === "deleteMessages")).toBe(false);
     const jobs = await listRelocationJobs(handle.db);
     expect(jobs).toHaveLength(1);
@@ -347,7 +379,7 @@ describe("Flow A relocate (API transformer)", () => {
 
     expect(calls.some((call) => call.method === "copyMessage")).toBe(false);
     expect(await listThreads(handle.db)).toHaveLength(0);
-    expect(calls[0]?.payload.text).toBe(
+    expect(calls.find((call) => call.method === "sendMessage")?.payload.text).toBe(
       renderConfirmPrompt({
         count: 2,
         threadTitle: ROOT.text!,
@@ -492,6 +524,194 @@ describe("Flow A relocate (API transformer)", () => {
       payload: { reason: "cancelled" },
     });
   });
+
+  it("ignores a forward when the sender cannot delete messages in the source chat", async () => {
+    member = {
+      status: "member",
+      user: { id: 7, is_bot: false, first_name: "Mod" },
+    } as ChatMember;
+    await deliverCluster(bot, [ROOT]);
+    expect(calls.some((call) => call.method === "getChatMember")).toBe(true);
+    expect(calls.some((call) => call.method === "sendMessage")).toBe(false);
+    expect(calls.some((call) => call.method === "deleteMessages")).toBe(false);
+
+    clearCanDeleteMessagesCache();
+    member = {
+      status: "administrator",
+      user: { id: 7, is_bot: false, first_name: "Mod" },
+      can_delete_messages: false,
+    } as ChatMember;
+    await deliverCluster(bot, [REPLY_ONE], { triggerStart: 301 });
+    expect(calls.some((call) => call.method === "sendMessage")).toBe(false);
+  });
+});
+
+describe("forum topic relocate", () => {
+  let bot: Bot;
+  let calls: ApiCall[];
+  let handle: DbHandle;
+  let member: ChatMember;
+
+  beforeEach(async () => {
+    clearCanDeleteMessagesCache();
+    handle = await createTestDb();
+    await seedForumPair(handle.db);
+    member = creatorMember;
+    const logger = createLogger({ LOG_LEVEL: "silent", NODE_ENV: "test" });
+    bot = createBot({
+      token: "test:token",
+      logger,
+      db: handle.db,
+      batchWindowMs: 60_000,
+    });
+    bot.botInfo = testBotInfo;
+    calls = installRecorder(bot, { member: () => member });
+    await bot.init();
+  });
+
+  afterEach(async () => {
+    stopRelocate(bot);
+    await handle.close();
+  });
+
+  async function deliverForum(
+    originals: Original[],
+    options?: {
+      sourceTopicId?: number | null;
+      targetTopicId?: number | null;
+      sourceTopicIds?: (number | null)[];
+      moderatorId?: number;
+    },
+  ) {
+    await deliverCluster(bot, originals, {
+      sourceChatId: FORUM_CHAT_ID,
+      targetChatId: FORUM_CHAT_ID,
+      sourceTopicId: options?.sourceTopicId ?? SOURCE_TOPIC_ID,
+      targetTopicId: options?.targetTopicId ?? TARGET_TOPIC_ID,
+      sourceTopicIds: options?.sourceTopicIds,
+      moderatorId: options?.moderatorId,
+    });
+  }
+
+  it("posts the header and notice inside the topics", async () => {
+    await deliverForum([ROOT, REPLY_ONE]);
+    await pressRelocate(bot, calls, "new", { chatId: FORUM_CHAT_ID });
+
+    const targetSends = calls.filter(
+      (call) =>
+        call.method === "sendMessage" && call.payload.message_thread_id === TARGET_TOPIC_ID,
+    );
+    expect(targetSends.length).toBeGreaterThanOrEqual(2);
+    const headerId = calls.find((call) => call.method === "editMessageText")?.payload
+      .message_id as number;
+    const pathId = String(FORUM_CHAT_ID).replace(/^-100/, "");
+    const threadLink = `https://t.me/c/${pathId}/${TARGET_TOPIC_ID}/${headerId}`;
+    const sourceLink = `https://t.me/c/${pathId}/${SOURCE_TOPIC_ID}/${ROOT.messageId}`;
+    expect(calls.find((call) => call.method === "editMessageText")?.payload.text).toBe(
+      renderForumThreadHeader({
+        threadTitle: ROOT.text!,
+        linkToUser: "tg://user?id=9",
+        userDisplayName: "Ada Lovelace",
+        linkToSourceChat: sourceLink,
+        threadLink,
+      }),
+    );
+    const copies = calls.filter((call) => call.method === "copyMessage");
+    expect(copies[0]?.payload).toMatchObject({
+      chat_id: FORUM_CHAT_ID,
+      from_chat_id: FORUM_CHAT_ID,
+      message_thread_id: TARGET_TOPIC_ID,
+      message_id: REPLY_ONE.messageId,
+    });
+    const notice = calls.filter((call) => call.method === "sendMessage").at(-1);
+    expect(notice?.payload).toMatchObject({
+      chat_id: FORUM_CHAT_ID,
+      message_thread_id: SOURCE_TOPIC_ID,
+    });
+    expect(notice?.payload.text).toBe(
+      renderForumSourceNotice({
+        threadTitle: ROOT.text!,
+        linkToUser: "tg://user?id=9",
+        userDisplayName: "Ada Lovelace",
+        linkToTargetChatThread: threadLink,
+      }),
+    );
+    expect((await listThreads(handle.db))[0]).toMatchObject({
+      targetChatId: FORUM_CHAT_ID,
+      targetTopicId: TARGET_TOPIC_ID,
+    });
+    expect(calls.some((call) => call.method === "deleteMessages")).toBe(true);
+  });
+
+  it("does not delete when every message is already in the target topic", async () => {
+    await deliverForum([ROOT], { sourceTopicId: TARGET_TOPIC_ID, targetTopicId: TARGET_TOPIC_ID });
+    expect(calls.find((call) => call.method === "sendMessage")?.payload.text).toBe(
+      renderMatchFailure(),
+    );
+    expect(calls.some((call) => call.method === "deleteMessages")).toBe(false);
+    expect(await findMessage(handle.db, FORUM_CHAT_ID, ROOT.messageId)).toBeTruthy();
+  });
+
+  it("does not delete when the bundle comes from more than one topic", async () => {
+    await deliverForum([ROOT, REPLY_ONE], {
+      sourceTopicIds: [SOURCE_TOPIC_ID, 11],
+      targetTopicId: TARGET_TOPIC_ID,
+    });
+    expect(calls.find((call) => call.method === "sendMessage")?.payload.text).toBe(
+      renderMatchFailure(),
+    );
+    expect(calls.some((call) => call.method === "deleteMessages")).toBe(false);
+  });
+
+  it("ignores the forwarded copy when it shares the original timestamp", async () => {
+    await bot.handleUpdate(
+      sourceUpdate(1, ROOT, { chatId: FORUM_CHAT_ID, topicId: SOURCE_TOPIC_ID }),
+    );
+    await bot.handleUpdate(
+      forwardUpdate(2, 201, ROOT, ROOT.fromUserId, {
+        chatId: FORUM_CHAT_ID,
+        topicId: TARGET_TOPIC_ID,
+        date: ROOT.date,
+      }),
+    );
+    await flushRelocate(bot);
+    expect(calls.find((call) => call.method === "sendMessage")?.payload.text).toContain(
+      ROOT.text!,
+    );
+    expect(calls.some((call) => call.method === "deleteMessages")).toBe(false);
+  });
+
+  it("ignores a forward from someone who cannot delete messages", async () => {
+    member = {
+      status: "administrator",
+      user: { id: 7, is_bot: false, first_name: "Mod" },
+      can_delete_messages: false,
+    } as ChatMember;
+    await deliverForum([ROOT]);
+    expect(calls.some((call) => call.method === "sendMessage")).toBe(false);
+    expect(calls.some((call) => call.method === "deleteMessages")).toBe(false);
+    expect(calls.some((call) => call.method === "getChatMember")).toBe(true);
+  });
+
+  it("deletes nothing when delete permission is removed before confirm", async () => {
+    await deliverForum([ROOT]);
+    member = {
+      status: "member",
+      user: { id: 7, is_bot: false, first_name: "Mod" },
+    } as ChatMember;
+    await pressRelocate(bot, calls, "new", { chatId: FORUM_CHAT_ID });
+    expect(calls.some((call) => call.method === "deleteMessages")).toBe(false);
+    expect(calls.some((call) => call.payload.text === renderPermissionDenied())).toBe(true);
+    expect(await findMessage(handle.db, FORUM_CHAT_ID, ROOT.messageId)).toBeTruthy();
+  });
+
+  it("lists only threads from the same topic when attaching", async () => {
+    await deliverForum([ROOT], { targetTopicId: 30 });
+    await pressRelocate(bot, calls, "new", { chatId: FORUM_CHAT_ID });
+    await deliverForum([REPLY_ONE], { targetTopicId: TARGET_TOPIC_ID });
+    await pressRelocate(bot, calls, "attach", { chatId: FORUM_CHAT_ID });
+    expect(relocateCallbacks(calls, "pick")).toHaveLength(0);
+  });
 });
 
 describe("RelocationDraftStore", () => {
@@ -521,19 +741,22 @@ describe("RelocationDraftStore", () => {
             triggerMessageId: 5,
             text: "hi",
             caption: null,
+            targetTopicId: null,
             fingerprint: "fp",
             origin: null,
           },
         ],
         resolved: [],
         threadTitle: "hi",
+        targetTopicId: null,
+        sourceTopicId: null,
       },
     });
 
     expect(store.remapChatId(1, 9)).toBe(1);
-    expect(store.getByKey(9, 7)?.id).toBe(draft.id);
-    expect(store.getByKey(1, 7)).toBeUndefined();
-    expect(store.getByKey(9, 7)?.plan.pair.targetChatId).toBe(9);
-    expect(store.getByKey(9, 7)?.plan.items[0]?.targetChatId).toBe(9);
+    expect(store.getByKey(9, null, 7)?.id).toBe(draft.id);
+    expect(store.getByKey(1, null, 7)).toBeUndefined();
+    expect(store.getByKey(9, null, 7)?.plan.pair.targetChatId).toBe(9);
+    expect(store.getByKey(9, null, 7)?.plan.items[0]?.targetChatId).toBe(9);
   });
 });
