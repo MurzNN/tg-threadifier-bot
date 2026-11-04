@@ -37,13 +37,13 @@ function welcomeText(): string {
   return t({
     message: `When moderators forward offtopic from the main chat to the helper chat, I rebuild it as a thread and leave a link behind.
 
-Operators: run /pair source and /pair target in the groups, then check /status.
+Operators: run /pair source and /pair target in the groups, or /pair forum in a forum group, then check /status.
 Guide: ${operatorGuideUrl}`,
   });
 }
 
 function noPairsText(): string {
-  return t`No chat pairs configured. Run /pair source and /pair target inside the group chats to link.`;
+  return t`No chat pairs configured. Run /pair source and /pair target inside the group chats to link, or /pair forum in a forum group.`;
 }
 
 function installApiRecorder(bot: Bot): OutgoingCall[] {

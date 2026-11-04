@@ -45,6 +45,28 @@ export function targetChatLabel(name: string | null | undefined): string {
   return trimmed ? trimmed : t`target chat`;
 }
 
+/** Header posted in the destination forum topic. The link points at the source topic. */
+export function renderForumThreadHeader(raw: {
+  threadTitle: string;
+  linkToUser: string;
+  userDisplayName: string;
+  linkToSourceChat: string;
+  threadLink: string;
+}): string {
+  const threadTitle = escapeHtml(raw.threadTitle);
+  const linkToUser = escapeHtml(raw.linkToUser);
+  const userDisplayName = escapeHtml(raw.userDisplayName);
+  const linkToSourceChat = escapeHtml(raw.linkToSourceChat);
+  const threadLink = escapeHtml(raw.threadLink);
+  return t({
+    comment:
+      "Thread header in a forum topic. The link is another topic in the same group, not a different chat. Thread means a reply thread, not a forum topic.",
+    message: `Thread: ${threadTitle}
+Initiated by the user <a href="${linkToUser}">${userDisplayName}</a> in <a href="${linkToSourceChat}">another topic</a>.
+<a href="${threadLink}">Thread link</a>.`,
+  });
+}
+
 export function renderThreadHeader(raw: {
   threadTitle: string;
   linkToUser: string;
@@ -64,6 +86,24 @@ Initiated by the user <a href="${linkToUser}">${userDisplayName}</a> in the chat
 <a href="${threadLink}">Thread link</a>.`;
 }
 
+/** Redirect notice posted in the source forum topic. */
+export function renderForumSourceNotice(raw: {
+  threadTitle: string;
+  linkToUser: string;
+  userDisplayName: string;
+  linkToTargetChatThread: string;
+}): string {
+  const threadTitle = escapeHtml(raw.threadTitle);
+  const linkToUser = escapeHtml(raw.linkToUser);
+  const userDisplayName = escapeHtml(raw.userDisplayName);
+  const linkToTargetChatThread = escapeHtml(raw.linkToTargetChatThread);
+  return t({
+    comment:
+      "Notice in the source forum topic. The link opens the new reply thread in another topic of the same group. Thread means a reply thread, not a forum topic.",
+    message: `The message "${threadTitle}" from <a href="${linkToUser}">${userDisplayName}</a> with responses moved to <a href="${linkToTargetChatThread}">a thread in another topic</a>. Please continue the conversation there.`,
+  });
+}
+
 export function renderSourceNotice(raw: {
   threadTitle: string;
   linkToUser: string;
@@ -77,6 +117,14 @@ export function renderSourceNotice(raw: {
   const linkToTargetChatThread = escapeHtml(raw.linkToTargetChatThread);
   const targetChatName = escapeHtml(raw.targetChatName);
   return t`The message "${threadTitle}" from <a href="${linkToUser}">${userDisplayName}</a> with responses forwarded to the chat <a href="${linkToTargetChatThread}">${targetChatName}</a>. Please continue the conversation there.`;
+}
+
+export function renderPermissionDenied(): string {
+  return t({
+    comment:
+      "Sent in the target chat when the person who forwarded no longer has permission to delete messages in the source chat. Nothing is deleted.",
+    message: `You need permission to delete messages in the source chat to relocate these forwards. Nothing was deleted.`,
+  });
 }
 
 export function renderMatchFailure(): string {

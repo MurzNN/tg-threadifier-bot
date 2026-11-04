@@ -14,6 +14,14 @@ A Telegram reply thread in the helper chat (`?thread=`). This is not a forum top
 |--------|-----------------|-------|
 | ru | ветка | тред and its other case forms (треда, треду, треды, …) |
 
+## topic
+
+A Telegram forum topic inside one group. This is not a reply thread.
+
+| Locale | Preferred lemma | Avoid |
+|--------|-----------------|-------|
+| ru | тема | ветка, тред |
+
 ## pair
 
 One linked main chat and helper chat (`chat_pairs`).

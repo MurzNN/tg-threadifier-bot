@@ -8,6 +8,7 @@ import {
   mediaUniqueIds,
   messageCaption,
   messageText,
+  messageTopicId,
   serializeForwardOrigin,
 } from "../lib/telegramMessage.js";
 import type { Logger } from "../logger.js";
@@ -63,6 +64,7 @@ export function createIngestMiddleware(
           mediaUniqueIds: mediaUniqueIds(msg),
         }),
         replyToMessageId: msg.reply_to_message?.message_id ?? null,
+        topicId: messageTopicId(msg),
         forwardOrigin: serializeForwardOrigin(msg),
         raw: msg,
       });

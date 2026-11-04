@@ -54,6 +54,12 @@ export async function startBotApiStub(): Promise<{
         };
       } else if (method === "copyMessage" || method === "forwardMessage") {
         result = { message_id: ++nextId };
+      } else if (method === "getChatMember") {
+        result = {
+          status: "creator",
+          user: { id: payload.user_id, is_bot: false, first_name: "Mod" },
+          is_anonymous: false,
+        };
       } else if (method === "getMe") {
         result = {
           id: 42,

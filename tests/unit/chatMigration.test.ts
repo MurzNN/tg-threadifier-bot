@@ -93,6 +93,7 @@ describe("remapChatId", () => {
       caption: null,
       contentFingerprint: "fp",
       replyToMessageId: null,
+      topicId: null,
       forwardOrigin: null,
       raw: {},
     });
@@ -105,6 +106,7 @@ describe("remapChatId", () => {
       caption: null,
       contentFingerprint: "fp2",
       replyToMessageId: null,
+      topicId: null,
       forwardOrigin: null,
       raw: {},
     });
@@ -117,6 +119,7 @@ describe("remapChatId", () => {
       caption: null,
       contentFingerprint: "fp2",
       replyToMessageId: null,
+      topicId: null,
       forwardOrigin: null,
       raw: {},
     });

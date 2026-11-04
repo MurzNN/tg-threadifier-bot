@@ -8,7 +8,7 @@
 | Privacy mode / group settings | Bot must receive the messages it needs to store and act on (disable privacy or grant admin as needed) |
 | Group → supergroup upgrade changes the chat id | On `migrate_to_chat_id` / `migrate_from_chat_id`, rewrite the old id to the new one in `chat_pairs`, `messages`, `threads`, open `relocation_jobs` payloads, and in-memory `/pair` drafts |
 | Deletes and forwards need rights | Bot must be admin (or equivalently privileged) in source and target |
-| Thread deep links | Use `https://t.me/{chatPath}/{messageId}?thread={messageId}` after creating the header message ([docs](https://core.telegram.org/api/links)) |
+| Thread deep links | Outside a forum, use `https://t.me/{chatPath}/{messageId}?thread={messageId}` after creating the header. Inside a forum, `?thread=` means the topic, so use `https://t.me/{chatPath}/{topicId}/{messageId}` (no `?thread=`), or the message path alone when the target is the General topic ([docs](https://core.telegram.org/api/links)) |
 | HTML in messages | Use Telegram HTML subset for user/chat links in templates |
 
 Do **not** rely on userbot / MTProto user sessions for the **product runtime**. MTProto clients (mtcute) are used only as **Test DC E2E actors**.
@@ -146,8 +146,8 @@ One process / one container runs both the Telegram bot backend and the Mini App 
 
 - **Ingest middleware:** normalize and upsert every relevant message into the store (source + target). At `debug`, each update and each ingest decision (stored, no message, chat outside an enabled pair) is logged. Startup logs `canReadAllGroupMessages`, the watched chat ids, and the database target, and warns when privacy mode hides ordinary group messages.
 - **Chat migration middleware:** when Telegram upgrades a basic group to a supergroup, remaps the old chat id to the new one across persisted pair/message/thread/job state (and `/pair` drafts) so ingest and relocate keep working. Colliding remaps soft-disable the remapped pair instead of duplicating an existing `(source, target)`.
-- **Forward detector:** when messages appear in `targetChat`, decide if they are a moderator-triggered forward batch from the linked `sourceChat`.
-- **Relocate confirmation:** a matched batch stays in an in-memory draft (one per target chat and moderator) until that moderator creates a thread, sets a custom title, attaches the bundle to a recent thread, or deletes the grouped forwards. Later forwards from the same moderator join the draft after the quiet window, and the question is posted again. Group → supergroup migration rewrites the draft’s chat id. A restart drops the draft.
+- **Forward detector:** when messages appear in `targetChat`, decide if they are a moderator-triggered forward batch from the linked `sourceChat`. The sender must be allowed to delete messages in that source chat (`creator`, or `administrator` with `can_delete_messages`) before the batch starts. A forum pair is the case where source and target are the same chat.
+- **Relocate confirmation:** a matched batch stays in an in-memory draft (one per target chat, topic, and moderator) until that moderator creates a thread, sets a custom title, attaches the bundle to a recent thread, or deletes the grouped forwards. A custom title is accepted only from the same topic. Later forwards from the same moderator in that topic join the draft after the quiet window, and the question is posted again. Group → supergroup migration rewrites the draft’s chat id. A restart drops the draft. Confirm, attach, custom title, and discard check the delete-messages right again and, on failure, leave messages in place.
 - **Relocate workflow:** implement Flow A (header → thread link → re-forward → deletes → source notice) in clear phases. Attaching to an existing thread skips the header and copies every matched message into that reply thread.
 - **Loose-message workflow:** implement Flow B (prompt + callbacks).
 - **Admin / config handlers:** pair chats; health; maybe dry-run flags for Test DC. See [Operator commands](#operator-commands). Command replies use the caller's language (`/language`, and the account language on `/start`).
@@ -169,6 +169,7 @@ Minimal fields to support matching and UI:
 | `content_fingerprint` | Optional hash of text + media file unique ids |
 | `reply_to_message_id` | Preserve topology when useful |
 | `forward_origin` | If Telegram provides origin metadata on the update |
+| `topic_id` | Forum topic id: `message_thread_id` when `is_topic_message` is true, otherwise null (General, or a non-forum chat). TS: `topicId` |
 | `raw` | Optional JSON of stripped update for debugging |
 | `created_at` | When we stored it |
 
@@ -190,7 +191,9 @@ Minimal fields to support matching and UI:
 Handlers live in `src/bot/commands/pair.ts`. Persistence lives in `src/db/chatPairs.ts`. Normative behavior is [workflows.md](workflows.md) Flow C.
 
 - Replies are plain text (`ctx.reply`, no `parse_mode`). Telegram HTML and `escapeHtml` are for relocate templates (`src/bot/relocate/templates.ts`).
-- `requireChatAdmin` (`src/bot/admin.ts`) treats a private chat as allowed and, in a group, requires Telegram status `creator` or `administrator`. `/pair` with no arguments and `/status` do not call it. `/pair source`, `/pair target`, and `/unpair` do.
+- `requireChatAdmin` (`src/bot/admin.ts`) treats a private chat as allowed and, in a group, requires Telegram status `creator` or `administrator`. `/pair` with no arguments and `/status` do not call it. `/pair source`, `/pair target`, `/pair forum`, and `/unpair` do.
+- `/pair forum` requires `chat.is_forum`, then upserts `source_chat_id = target_chat_id =` this chat. It does not write a `PairDraftStore` entry. `isForumPair` is that equality. Reads (`/pair`, `/status`, private lists) render those rows as forum mode instead of a source/target role. The one-enabled-pair-per-target rule still applies, so forum mode soft-disables a cross-group pair that targets this chat. The chat may remain the source of a pair whose target is a different chat.
+- Relocate’s delete-messages gate is separate from `requireChatAdmin`. `canDeleteMessages` allows `creator`, or `administrator` with `can_delete_messages`. It denies every other status and any lookup error. The result is cached per `(chatId, userId)` for the batch window; confirm and discard bypass the cache.
 - Every row is owned by `configured_by_user_id`. Slash commands store the caller's Telegram user id. Env seed stores `CONFIGURED_BY_USER_ID`.
 - Upsert identity is `(source_chat_id, target_chat_id)`. One chat may appear in more than one row. If that exact pair already belongs to a different user, the upsert writes nothing and `/pair` tells the caller the pair is already configured by another user.
 - **At most one enabled pair per `target_chat_id`.** Enabling a pair (via `/pair`, env seed, or upsert) soft-disables every other enabled row that shares that target, including another user's row. Lookup prefers the newest pair id (`ORDER BY id DESC`).
@@ -209,6 +212,7 @@ Handlers live in `src/bot/commands/pair.ts`. Persistence lives in `src/db/chatPa
 | `thread_title` | The only title. Header, source notice, and stored label; TS / Lingui: `threadTitle` / `{threadTitle}`. Recent-thread buttons shorten it to 12 characters (`threadTitle12`, `THREAD_TITLE_BUTTON_MAX`). A custom title is stored in full |
 | `title_source` | `truncated` \| `custom` \| `ai`; TS: `titleSource`. `custom` is the moderator’s untruncated title |
 | `initiator_user_id` | TS: `initiatorUserId` |
+| `target_topic_id` | Topic the header was posted in. Null for General and for non-forum chats. TS: `targetTopicId` |
 | `created_at` | For “last 5” ordering |
 
 **`user_settings`**
@@ -231,24 +235,26 @@ One row per Telegram chat. Add further per-chat settings as columns; updates tou
 | `locale` | `en`, `es`, `fr`, or `ru` — language of command replies in this chat |
 | `updated_at` | Last change to the row |
 
-Indexes: `(chat_id, message_id)` unique; `(target_chat_id, created_at desc)` on threads; lookup helpers for fingerprint + date windows when matching forwards.
+Indexes: `(chat_id, message_id)` unique; `(target_chat_id, target_topic_id, created_at desc)` on threads; lookup helpers for fingerprint + date windows when matching forwards. Recent-thread lists filter `target_topic_id` with `IS NOT DISTINCT FROM`, so a null topic matches General and non-forum threads only.
 
 ### Matching forwarded batches
 
 Because the moderator’s forwards land as **new** messages in `targetChat`, the bot:
 
 1. Detects `forward_origin` on a non-bot message in the linked `targetChat` (`user`, `hidden_user`, `chat`, or `channel`).
-2. Groups forwards from the same user in that chat into one batch. The quiet period is **2 seconds** (`BATCH_WINDOW_MS`); each new forward resets it, so a media group that arrives together stays one batch.
-3. Restricts candidates to the linked `sourceChat` for each enabled pair of that target (newest pair first; warn and try siblings if several remain).
-4. Resolves each item:
+2. Requires `canDeleteMessages` in the pair’s source chat. A denial skips the batch.
+3. Groups forwards from the same user in that chat and topic into one batch. The quiet period is **2 seconds** (`BATCH_WINDOW_MS`); each new forward resets it, so a media group that arrives together stays one batch. The draft key is `chat:topic:moderator`.
+4. Restricts candidates to the linked `sourceChat` for each enabled pair of that target (newest pair first; warn and try siblings if several remain). The batch’s own trigger message ids are excluded, because ingest stores the forward before matching.
+5. Resolves each item:
    - **Channel origin** whose chat is the source: exact `message_id`. A channel origin from any other chat is a failure (not a fuzzy match).
    - **Otherwise:** one stored row with the same content fingerprint, the same `forward_origin.date`, and (when the sender is a known user) the same author.
-5. Sorts matches by stored `date`, then message id. The earliest is the header root.
-6. Posts a confirmation in the target chat. The relocate job stays unstarted until the forwarding moderator chooses. **Create new thread** runs the phases below. **Set custom thread title** waits for that moderator’s next plain text and uses it as `threadTitle` with `title_source = custom` (no 120-character truncation). **Attach to a previous thread** lists the last 5 threads and copies every matched message into the chosen reply thread, then runs the cleanup and notice phases without `header_created`. **Delete these messages** deletes those target forwards and the question, records `phase = aborted` with reason `cancelled`, and leaves the source messages. Only that moderator’s callbacks are accepted.
+6. For a forum pair, every match must share one `topic_id`, and that topic must differ from the target topic. Otherwise the failure reason is `mixed_topics` or `same_topic`.
+7. Sorts matches by stored `date`, then message id. The earliest is the header root. Its `topic_id` is the source topic.
+8. Posts a confirmation in the target topic. The relocate job stays unstarted until the forwarding moderator chooses. **Create new thread** runs the phases below. **Set custom thread title** waits for that moderator’s next plain text in the same topic and uses it as `threadTitle` with `title_source = custom` (no 120-character truncation). **Attach to a previous thread** lists the last 5 threads in that topic and copies every matched message into the chosen reply thread, then runs the cleanup and notice phases without `header_created`. **Delete these messages** deletes those target forwards and the question, records `phase = aborted` with reason `cancelled`, and leaves the source messages. Only that moderator’s callbacks are accepted. Each of those choices checks `canDeleteMessages` again first.
 
-A later batch from the same moderator is appended and the whole set is matched again. On success the question is deleted and posted again. On failure the question is deleted, the draft is cleared, and the match-failure notice is sent. Nothing else is deleted.
+A later batch from the same moderator in the same topic is appended and the whole set is matched again. On success the question is deleted and posted again. On failure the question is deleted, the draft is cleared, and the match-failure notice is sent. Nothing else is deleted.
 
-Zero matches or more than one candidate is a match failure: persist `relocation_jobs.phase = aborted`, tell the moderator in the target chat, and **do not delete**. Match-failure logs include `sourceChatId`, origin date, fingerprint, origin type, and candidate count. Open drafts are in memory and do not survive a process restart.
+Zero matches, more than one candidate, `same_topic`, or `mixed_topics` is a match failure: persist `relocation_jobs.phase = aborted`, tell the moderator in the target topic, and **do not delete**. Match-failure logs include `sourceChatId`, origin date, fingerprint, origin type, candidate count, and the forum topic reason when there is one. Open drafts are in memory and do not survive a process restart. The stored thread row records `target_topic_id`.
 
 ### Relocate phases (safety)
 
@@ -261,7 +267,7 @@ Suggested commit points so failures don’t destroy unrecovered content:
 5. **Cleanup source** — delete originals; mark `source_cleaned`.
 6. **Announce** — post source notice; mark `completed`.
 
-The header is sent and then edited once its id is known, so `{threadLink}` is `https://t.me/{chatPath}/{messageId}?thread={messageId}`. Other messages are placed in that reply thread with `copyMessage` and `reply_parameters` pointing at the header. `forwardMessage` cannot set a reply, and `message_thread_id` applies to forum topics only — Flow A does not create forum topics. A copy is sent by the bot, so text and captions are then edited to append `— {authorName}` (`text_mention` when the sender id is known). Original formatting entities that still fit are kept. Stickers and other non-caption messages stay as the plain copy.
+The header is sent and then edited once its id is known. Outside a forum, `{threadLink}` is `https://t.me/{chatPath}/{messageId}?thread={messageId}`. Inside a forum, `{threadLink}` is the message path with the target topic id when that id is set, and the message path alone for General — never `?thread=`. Other messages are placed in that reply thread with `copyMessage`, `reply_parameters` pointing at the header, and `message_thread_id` when the destination topic id is set. `forwardMessage` cannot set a reply. Flow A does not call `createForumTopic`; it posts the reply thread inside the topic the moderator forwarded into. A copy is sent by the bot, so text and captions are then edited to append `— {authorName}` (`text_mention` when the sender id is known). Original formatting entities that still fit are kept. Stickers and other non-caption messages stay as the plain copy. Forum pairs use the “another topic” header and notice; cross-group pairs keep the chat-name templates even when those sends are topic-scoped.
 
 If a Bot API call fails after the plan, the job is marked `aborted` and `payload.stoppedAt` keeps the last committed phase. Deletes that have not run are skipped. The moderator gets a short notice in the target chat. Jobs are rows in `relocation_jobs` (an inspection command is M5). `aiTitlesEnabled` is stored but ignored until M6; titles always use truncation, or the Lingui “Media message” label when the root has no text or caption. A media-only root is not copied into the thread.
 
@@ -308,7 +314,7 @@ Environment (illustrative):
 - `PORT` — HTTP listen port for Mini App + health + webhook
 - Optional: `LOG_LEVEL`, feature flags
 
-Chat IDs live in `chat_pairs` after pairing. Until M4, operators can also use `/pair`, `/unpair`, `/status` (see [workflows.md](workflows.md) Flow C). `/pair` with no arguments lists the caller's pairs in a private chat and reports the current chat's pairing in a group. `/language` sets this chat's command language. `/start` stores the caller's fallback language from the Telegram account when that language is shipped, otherwise `en`. Helm values map secrets into the container env.
+Chat IDs live in `chat_pairs` after pairing. Until M4, operators can also use `/pair`, `/pair forum`, `/unpair`, `/status` (see [workflows.md](workflows.md) Flow C). `/pair` with no arguments lists the caller's pairs in a private chat and reports the current chat's pairing in a group. `/language` sets this chat's command language. `/start` stores the caller's fallback language from the Telegram account when that language is shipped, otherwise `en`. Helm values map secrets into the container env.
 
 ## Testing strategy
 

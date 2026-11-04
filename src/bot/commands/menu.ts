@@ -31,8 +31,8 @@ export function commandMenu(locale: Locale): BotCommand[] {
       command: "pair",
       description: t({
         comment:
-          "Telegram command menu description for /pair. Links a source chat and a target chat.",
-        message: "Link source and target chats",
+          "Telegram command menu description for /pair. Links a source chat and a target chat, or enables forum mode in one group.",
+        message: "Link chats or enable forum mode",
       }),
     },
     {

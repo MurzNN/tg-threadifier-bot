@@ -5,14 +5,20 @@ export type DraftStep = "confirm" | "title" | "pick";
 export type RelocationDraft = {
   id: string;
   targetChatId: number;
+  /** Topic the confirmation and header are posted in. Null is General or non-forum. */
+  targetTopicId: number | null;
   moderatorUserId: number;
   step: DraftStep;
   promptMessageId: number | null;
   plan: ResolvedRelocation;
 };
 
-export function draftKey(targetChatId: number, moderatorUserId: number): string {
-  return `${targetChatId}:${moderatorUserId}`;
+export function draftKey(
+  targetChatId: number,
+  targetTopicId: number | null,
+  moderatorUserId: number,
+): string {
+  return `${targetChatId}:${targetTopicId ?? ""}:${moderatorUserId}`;
 }
 
 /** In-memory relocate confirmation. One open draft per target chat and moderator. */
@@ -22,8 +28,12 @@ export class RelocationDraftStore {
   #tails = new Map<string, Promise<void>>();
   #seq = 0;
 
-  getByKey(targetChatId: number, moderatorUserId: number): RelocationDraft | undefined {
-    return this.#byKey.get(draftKey(targetChatId, moderatorUserId));
+  getByKey(
+    targetChatId: number,
+    targetTopicId: number | null,
+    moderatorUserId: number,
+  ): RelocationDraft | undefined {
+    return this.#byKey.get(draftKey(targetChatId, targetTopicId, moderatorUserId));
   }
 
   getById(id: string): RelocationDraft | undefined {
@@ -39,25 +49,34 @@ export class RelocationDraftStore {
     const draft: RelocationDraft = {
       id: this.#seq.toString(36),
       targetChatId: input.targetChatId,
+      targetTopicId: input.plan.targetTopicId,
       moderatorUserId: input.moderatorUserId,
       step: "confirm",
       promptMessageId: null,
       plan: input.plan,
     };
     this.#byId.set(draft.id, draft);
-    this.#byKey.set(draftKey(draft.targetChatId, draft.moderatorUserId), draft);
+    this.#byKey.set(
+      draftKey(draft.targetChatId, draft.targetTopicId, draft.moderatorUserId),
+      draft,
+    );
     return draft;
   }
 
   delete(draft: RelocationDraft): void {
     this.#byId.delete(draft.id);
-    const key = draftKey(draft.targetChatId, draft.moderatorUserId);
+    const key = draftKey(draft.targetChatId, draft.targetTopicId, draft.moderatorUserId);
     if (this.#byKey.get(key)?.id === draft.id) this.#byKey.delete(key);
   }
 
   /** Run draft updates and button presses for one moderator one at a time. */
-  runExclusive<T>(targetChatId: number, moderatorUserId: number, fn: () => Promise<T>): Promise<T> {
-    const key = draftKey(targetChatId, moderatorUserId);
+  runExclusive<T>(
+    targetChatId: number,
+    targetTopicId: number | null,
+    moderatorUserId: number,
+    fn: () => Promise<T>,
+  ): Promise<T> {
+    const key = draftKey(targetChatId, targetTopicId, moderatorUserId);
     const prev = this.#tails.get(key) ?? Promise.resolve();
     const run = prev.then(fn, fn);
     this.#tails.set(
@@ -75,7 +94,7 @@ export class RelocationDraftStore {
     let updated = 0;
     for (const draft of this.#byId.values()) {
       if (draft.targetChatId !== oldChatId) continue;
-      this.#byKey.delete(draftKey(oldChatId, draft.moderatorUserId));
+      this.#byKey.delete(draftKey(oldChatId, draft.targetTopicId, draft.moderatorUserId));
       draft.targetChatId = newChatId;
       if (draft.plan.pair.targetChatId === oldChatId) {
         draft.plan.pair = { ...draft.plan.pair, targetChatId: newChatId };
@@ -83,7 +102,10 @@ export class RelocationDraftStore {
       for (const item of draft.plan.items) {
         if (item.targetChatId === oldChatId) item.targetChatId = newChatId;
       }
-      this.#byKey.set(draftKey(newChatId, draft.moderatorUserId), draft);
+      this.#byKey.set(
+        draftKey(newChatId, draft.targetTopicId, draft.moderatorUserId),
+        draft,
+      );
       updated += 1;
     }
     return updated;

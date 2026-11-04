@@ -62,12 +62,12 @@ function chatLabel(title: string | null, chatId: number): string {
   return name ? `${name} (${chatId})` : String(chatId);
 }
 
-function installApiRecorder(bot: Bot): OutgoingCall[] {
+function installApiRecorder(bot: Bot, member: () => ChatMember): OutgoingCall[] {
   const calls: OutgoingCall[] = [];
   bot.api.config.use(async (_prev, method, payload) => {
     calls.push({ method, payload: payload as Record<string, unknown> });
     if (method === "getChatMember") {
-      return { ok: true, result: adminMember } as Awaited<
+      return { ok: true, result: member() } as Awaited<
         ReturnType<ApiCallFn>
       >;
     }
@@ -102,13 +102,19 @@ function groupCommand(
   text: string,
   title: string,
   userId = 7,
+  isForum = false,
 ) {
   return {
     update_id: updateId,
     message: {
       message_id: updateId,
       date: 1_700_000_000,
-      chat: { id: chatId, type: "supergroup" as const, title },
+      chat: {
+        id: chatId,
+        type: "supergroup" as const,
+        title,
+        ...(isForum ? { is_forum: true as const } : {}),
+      },
       from: { id: userId, is_bot: false, first_name: "Admin" },
       text,
       entities: [{ offset: 0, length: text.indexOf(" ") === -1 ? text.length : text.indexOf(" "), type: "bot_command" as const }],
@@ -120,13 +126,15 @@ describe("pair commands", () => {
   let bot: Bot;
   let calls: OutgoingCall[];
   let handle: DbHandle;
+  let member: ChatMember;
 
   beforeEach(async () => {
     handle = await createTestDb();
+    member = adminMember;
     const logger = createLogger({ LOG_LEVEL: "silent", NODE_ENV: "test" });
     bot = createBot({ token: "test:token", logger, db: handle.db });
     bot.botInfo = botInfo;
-    calls = installApiRecorder(bot);
+    calls = installApiRecorder(bot, () => member);
     await bot.init();
   });
 
@@ -190,12 +198,12 @@ describe("pair commands", () => {
   it("/status in a private chat with no pairs points at the slash commands", async () => {
     await bot.handleUpdate(privateCommand(1, "/status"));
     expect(calls.find((c) => c.method === "sendMessage")?.payload.text).toBe(
-      t`No enabled chat pairs. Use /pair source and /pair target.`,
+      t`No enabled chat pairs. Use /pair source and /pair target, or /pair forum.`,
     );
   });
 
   it("/pair with no arguments lists the caller's configured pairs in a private chat", async () => {
-    const noPairs = t`No chat pairs configured. Run /pair source and /pair target inside the group chats to link.`;
+    const noPairs = t`No chat pairs configured. Run /pair source and /pair target inside the group chats to link, or /pair forum in a forum group.`;
     await bot.handleUpdate(privateCommand(1, "/pair"));
     expect(calls.find((c) => c.method === "sendMessage")?.payload).toMatchObject({
       chat_id: 7,
@@ -228,7 +236,7 @@ describe("pair commands", () => {
   });
 
   it("/pair with no arguments reports this chat's pairing in a group", async () => {
-    const notPaired = t`This chat is not paired. Admins can run /pair source or /pair target here.`;
+    const notPaired = t`This chat is not paired. Admins can run /pair source, /pair target, or /pair forum here.`;
     await bot.handleUpdate(groupCommand(1, -1001, "/pair", "Main"));
     expect(calls.find((c) => c.method === "sendMessage")?.payload).toMatchObject({
       chat_id: -1001,
@@ -282,7 +290,7 @@ describe("pair commands", () => {
     calls.length = 0;
     await bot.handleUpdate(groupCommand(4, -1001, "/pair", "Main"));
     expect(calls.find((c) => c.method === "sendMessage")?.payload.text).toBe(
-      t`This chat is not paired. Admins can run /pair source or /pair target here.`,
+      t`This chat is not paired. Admins can run /pair source, /pair target, or /pair forum here.`,
     );
   });
 
@@ -310,5 +318,93 @@ describe("pair commands", () => {
       t`This pair was configured by another user.`,
     );
     expect(await listEnabledPairs(handle.db)).toHaveLength(1);
+  });
+
+  it("/pair forum enables a same-chat pair in a forum group", async () => {
+    await bot.handleUpdate(groupCommand(1, -1001, "/pair forum", "Forum", 7, true));
+    const pairs = await listEnabledPairs(handle.db);
+    expect(pairs).toHaveLength(1);
+    expect(pairs[0]).toMatchObject({
+      sourceChatId: -1001,
+      targetChatId: -1001,
+      configuredByUserId: 7,
+      enabled: true,
+    });
+    const pair = pairs[0]!;
+    expect(calls.at(-1)?.payload.text).toBe(
+      t`Forum mode enabled for this group (pair #${pair.id}). Forwards between topics are relocated here.`,
+    );
+  });
+
+  it("/pair forum is rejected when the group has no topics", async () => {
+    await bot.handleUpdate(groupCommand(1, -1001, "/pair forum", "Plain"));
+    expect(calls.at(-1)?.payload.text).toBe(
+      t`Forum mode only works in a group with topics enabled.`,
+    );
+    expect(await listChatPairs(handle.db)).toHaveLength(0);
+  });
+
+  it("/pair forum is rejected for non-admins", async () => {
+    member = { status: "member", user: { id: 7, is_bot: false, first_name: "Mod" } } as ChatMember;
+    await bot.handleUpdate(groupCommand(1, -1001, "/pair forum", "Forum", 7, true));
+    expect(calls.at(-1)?.payload.text).toBe(t`Only chat admins can configure pairs.`);
+    expect(await listChatPairs(handle.db)).toHaveLength(0);
+  });
+
+  it("/pair forum conflicts when another user already enabled forum mode", async () => {
+    await bot.handleUpdate(groupCommand(1, -1001, "/pair forum", "Forum", 7, true));
+    await bot.handleUpdate(groupCommand(2, -1001, "/pair forum", "Forum", 8, true));
+    expect(calls.at(-1)?.payload.text).toBe(
+      t`This source and target are already paired by another user.`,
+    );
+    const pairs = await listChatPairs(handle.db);
+    expect(pairs).toHaveLength(1);
+    expect(pairs[0]?.configuredByUserId).toBe(7);
+  });
+
+  it("/pair forum soft-disables a cross-group pair that targets this chat", async () => {
+    await bot.handleUpdate(groupCommand(1, -1002, "/pair source", "Main"));
+    await bot.handleUpdate(groupCommand(2, -1001, "/pair target", "Helper"));
+    await bot.handleUpdate(groupCommand(3, -1001, "/pair forum", "Helper", 7, true));
+
+    const enabled = await listEnabledPairs(handle.db);
+    expect(enabled).toHaveLength(1);
+    expect(enabled[0]).toMatchObject({
+      sourceChatId: -1001,
+      targetChatId: -1001,
+      enabled: true,
+    });
+    const all = await listChatPairs(handle.db);
+    expect(all.find((pair) => pair.sourceChatId === -1002)?.enabled).toBe(false);
+  });
+
+  it("/status, /pair, and /unpair describe a forum pair", async () => {
+    await bot.handleUpdate(groupCommand(1, -1001, "/pair forum", "Forum", 7, true));
+    calls.length = 0;
+    await bot.handleUpdate(groupCommand(2, -1001, "/status", "Forum", 7, true));
+    const pair = (await listEnabledPairs(handle.db))[0]!;
+    expect(calls.at(-1)?.payload.text).toBe(
+      t`This chat is in forum mode in pair #${pair.id}: ${pair.sourceChatId}.`,
+    );
+
+    calls.length = 0;
+    await bot.handleUpdate(groupCommand(3, -1001, "/pair", "Forum", 7, true));
+    expect(calls.at(-1)?.payload.text).toBe(
+      t`This chat is in forum mode in pair #${pair.id} (enabled).`,
+    );
+
+    calls.length = 0;
+    await bot.handleUpdate(privateCommand(4, "/pair"));
+    const label = chatLabel(pair.sourceTitle, pair.sourceChatId);
+    const lines = [t`#${pair.id} (enabled, forum): ${label}`];
+    expect(calls.at(-1)?.payload.text).toBe(t`Configured pairs:\n${lines.join("\n")}`);
+
+    calls.length = 0;
+    await bot.handleUpdate(groupCommand(5, -1001, "/unpair", "Forum", 7, true));
+    expect(await listChatPairs(handle.db)).toHaveLength(0);
+    const deleted = 1;
+    expect(calls.at(-1)?.payload.text).toBe(
+      t`Deleted ${deleted} chat pair(s) involving this chat.`,
+    );
   });
 });

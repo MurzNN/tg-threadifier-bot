@@ -28,6 +28,8 @@ export const messages = pgTable(
     caption: text("caption"),
     contentFingerprint: text("content_fingerprint"),
     replyToMessageId: integer("reply_to_message_id"),
+    /** Forum topic id. Null is General, or a chat that is not a forum. */
+    topicId: integer("topic_id"),
     forwardOrigin: text("forward_origin"),
     raw: jsonb("raw"),
     createdAt: timestamp("created_at", { withTimezone: true, mode: "date" })
@@ -58,6 +60,8 @@ export const threads = pgTable(
   {
     id: serial("id").primaryKey(),
     targetChatId: bigint("target_chat_id", { mode: "number" }).notNull(),
+    /** Forum topic the header was posted in. Null is General or a non-forum chat. */
+    targetTopicId: integer("target_topic_id"),
     rootMessageId: integer("root_message_id").notNull(),
     threadTitle: text("thread_title").notNull(),
     titleSource: text("title_source").notNull().default("truncated"),
@@ -66,7 +70,13 @@ export const threads = pgTable(
       .notNull()
       .defaultNow(),
   },
-  (t) => [index("threads_target_created_idx").on(t.targetChatId, t.createdAt)],
+  (t) => [
+    index("threads_target_created_idx").on(
+      t.targetChatId,
+      t.targetTopicId,
+      t.createdAt,
+    ),
+  ],
 );
 
 /**

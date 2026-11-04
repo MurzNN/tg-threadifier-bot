@@ -23,13 +23,29 @@ msgstr "{0, plural, one {Перенести # сообщение в ветку?}
 
 #. placeholder {0}: pair.id
 #: src/bot/commands/pair.ts
+msgid "#{0} (disabled, forum): {label}"
+msgstr "#{0} (отключена, форум): {label}"
+
+#. placeholder {0}: pair.id
+#: src/bot/commands/pair.ts
 msgid "#{0} (disabled): {source} → {target}"
 msgstr "#{0} (отключена): {source} → {target}"
 
 #. placeholder {0}: pair.id
 #: src/bot/commands/pair.ts
+msgid "#{0} (enabled, forum): {label}"
+msgstr "#{0} (включена, форум): {label}"
+
+#. placeholder {0}: pair.id
+#: src/bot/commands/pair.ts
 msgid "#{0} (enabled): {source} → {target}"
 msgstr "#{0} (включена): {source} → {target}"
+
+#. placeholder {0}: p.id
+#. placeholder {1}: p.sourceChatId
+#: src/bot/commands/pair.ts
+msgid "#{0}: forum {1}"
+msgstr "#{0}: форум {1}"
 
 #. Inline button in the helper chat. Opens a list of recent threads so the forwarded messages can be added to one of them.
 #: src/bot/relocate/templates.ts
@@ -97,15 +113,24 @@ msgid "Enabled pairs:\n"
 msgstr "Включённые связки:\n"
 "{0}"
 
+#. placeholder {0}: pair.id
+#: src/bot/commands/pair.ts
+msgid "Forum mode enabled for this group (pair #{0}). Forwards between topics are relocated here."
+msgstr "Режим форума включён для этой группы (связка #{0}). Пересылки между темами переносятся здесь."
+
+#: src/bot/commands/pair.ts
+msgid "Forum mode only works in a group with topics enabled."
+msgstr "Режим форума работает только в группе с включёнными темами."
+
 #. Confirmation after the user picks a bot language. {languageName} is that language's own name, such as Español.
 #: src/bot/commands/language.ts
 msgid "Language set to {languageName}."
 msgstr "Язык установлен: {languageName}."
 
-#. Telegram command menu description for /pair. Links a source chat and a target chat.
+#. Telegram command menu description for /pair. Links a source chat and a target chat, or enables forum mode in one group.
 #: src/bot/commands/menu.ts
-msgid "Link source and target chats"
-msgstr "Связать исходный и целевой чаты"
+msgid "Link chats or enable forum mode"
+msgstr "Связать чаты или включить режим форума"
 
 #: src/bot/relocate/templates.ts
 msgid "Media message"
@@ -116,12 +141,12 @@ msgid "No chat pair includes this chat."
 msgstr "Ни одна связка чатов не включает этот чат."
 
 #: src/bot/commands/pair.ts
-msgid "No chat pairs configured. Run /pair source and /pair target inside the group chats to link."
-msgstr "Связки чатов не настроены. Выполните /pair source и /pair target в групповых чатах, чтобы связать их."
+msgid "No chat pairs configured. Run /pair source and /pair target inside the group chats to link, or /pair forum in a forum group."
+msgstr "Связки чатов не настроены. Выполните /pair source и /pair target в групповых чатах, чтобы связать их, или /pair forum в группе-форуме."
 
 #: src/bot/commands/pair.ts
-msgid "No enabled chat pairs. Use /pair source and /pair target."
-msgstr "Нет включённых связок чатов. Используйте /pair source и /pair target."
+msgid "No enabled chat pairs. Use /pair source and /pair target, or /pair forum."
+msgstr "Нет включённых связок чатов. Используйте /pair source и /pair target или /pair forum."
 
 #. Callback alert when the moderator wants to attach forwards but this helper chat has no threads yet.
 #: src/bot/relocate/templates.ts
@@ -142,6 +167,10 @@ msgstr "Выбрать может только тот, кто переслал �
 #: src/bot/commands/pair.ts
 msgid "Pair enabled: source {0} → target {1}. Ingest is active for both chats."
 msgstr "Связка включена: источник {0} → назначение {1}. Запись сообщений активна в обоих чатах."
+
+#: src/bot/commands/pair.ts
+msgid "Run /pair forum inside a forum group."
+msgstr "Выполните /pair forum в группе-форуме."
 
 #: src/bot/commands/pair.ts
 msgid "Run /pair source or /pair target inside the group chats to link."
@@ -172,8 +201,8 @@ msgid "Show the welcome message"
 msgstr "Показать приветствие"
 
 #: src/bot/commands/pair.ts
-msgid "Source and target must be different chats. Use /pair again in each chat."
-msgstr "Источник и назначение должны быть разными чатами. Снова выполните /pair в каждом чате."
+msgid "Source and target must be different chats. To relocate between topics in one forum group, run /pair forum there."
+msgstr "Источник и назначение должны быть разными чатами. Чтобы переносить сообщения между темами одной группы-форума, выполните там /pair forum."
 
 #: src/bot/relocate/templates.ts
 msgid "source chat"
@@ -206,6 +235,11 @@ msgstr "Этой ветки больше нет."
 msgid "The message \"{threadTitle}\" from <a href=\"{linkToUser}\">{userDisplayName}</a> with responses forwarded to the chat <a href=\"{linkToTargetChatThread}\">{targetChatName}</a>. Please continue the conversation there."
 msgstr "Сообщение «{threadTitle}» от <a href=\"{linkToUser}\">{userDisplayName}</a> вместе с ответами переслано в чат <a href=\"{linkToTargetChatThread}\">{targetChatName}</a>. Продолжайте разговор там."
 
+#. Notice in the source forum topic. The link opens the new reply thread in another topic of the same group. Thread means a reply thread, not a forum topic.
+#: src/bot/relocate/templates.ts
+msgid "The message \"{threadTitle}\" from <a href=\"{linkToUser}\">{userDisplayName}</a> with responses moved to <a href=\"{linkToTargetChatThread}\">a thread in another topic</a>. Please continue the conversation there."
+msgstr "Сообщение «{threadTitle}» от <a href=\"{linkToUser}\">{userDisplayName}</a> вместе с ответами перенесено в <a href=\"{linkToTargetChatThread}\">ветку в другой теме</a>. Продолжайте разговор там."
+
 #. placeholder {0}: pairs.length
 #. placeholder {1}: blocks.join("\n\n")
 #: src/bot/commands/pair.ts
@@ -214,14 +248,30 @@ msgid "This chat is in {0} pairs:\n"
 msgstr "Этот чат участвует в {0} связках:\n"
 "{1}"
 
+#. placeholder {0}: pair.id
+#: src/bot/commands/pair.ts
+msgid "This chat is in forum mode in pair #{0} (disabled)."
+msgstr "Этот чат в режиме форума в связке #{0} (отключена)."
+
+#. placeholder {0}: pair.id
+#: src/bot/commands/pair.ts
+msgid "This chat is in forum mode in pair #{0} (enabled)."
+msgstr "Этот чат в режиме форума в связке #{0} (включена)."
+
+#. placeholder {0}: here.id
+#. placeholder {1}: here.sourceChatId
+#: src/bot/commands/pair.ts
+msgid "This chat is in forum mode in pair #{0}: {1}."
+msgstr "Этот чат в режиме форума в связке #{0}: {1}."
+
 #. placeholder {0}: enabled.length
 #: src/bot/commands/pair.ts
 msgid "This chat is not in an enabled pair. Enabled pairs: {0}."
 msgstr "Этот чат не входит во включённую связку. Включённых связок: {0}."
 
 #: src/bot/commands/pair.ts
-msgid "This chat is not paired. Admins can run /pair source or /pair target here."
-msgstr "Этот чат не входит в связку. Администраторы могут выполнить здесь /pair source или /pair target."
+msgid "This chat is not paired. Admins can run /pair source, /pair target, or /pair forum here."
+msgstr "Этот чат не входит в связку. Администраторы могут выполнить здесь /pair source, /pair target или /pair forum."
 
 #. placeholder {0}: here.id
 #. placeholder {1}: here.sourceChatId
@@ -284,6 +334,15 @@ msgstr "Этот источник и назначение уже связал д
 msgid "Thread: {threadTitle}"
 msgstr "Ветка: {threadTitle}"
 
+#. Thread header in a forum topic. The link is another topic in the same group, not a different chat. Thread means a reply thread, not a forum topic.
+#: src/bot/relocate/templates.ts
+msgid "Thread: {threadTitle}\n"
+"Initiated by the user <a href=\"{linkToUser}\">{userDisplayName}</a> in <a href=\"{linkToSourceChat}\">another topic</a>.\n"
+"<a href=\"{threadLink}\">Thread link</a>."
+msgstr "Ветка: {threadTitle}\n"
+"Начат пользователем <a href=\"{linkToUser}\">{userDisplayName}</a> в <a href=\"{linkToSourceChat}\">другой теме</a>.\n"
+"<a href=\"{threadLink}\">Ссылка на ветку</a>."
+
 #: src/bot/relocate/templates.ts
 msgid "Thread: {threadTitle}\n"
 "Initiated by the user <a href=\"{linkToUser}\">{userDisplayName}</a> in the chat <a href=\"{linkToSourceChat}\">{sourceChatName}</a>.\n"
@@ -298,8 +357,8 @@ msgid "Thread: {threadTitle12}"
 msgstr "Ветка: {threadTitle12}"
 
 #: src/bot/commands/pair.ts
-msgid "Usage: /pair source or /pair target (run inside the group). /pair alone shows pairing status."
-msgstr "Использование: /pair source или /pair target (выполните в группе). /pair без аргументов показывает состояние связывания."
+msgid "Usage: /pair source, /pair target, or /pair forum (run inside the group). /pair alone shows pairing status."
+msgstr "Использование: /pair source, /pair target или /pair forum (выполните в группе). /pair без аргументов показывает состояние связывания."
 
 #: src/bot/relocate/templates.ts
 msgid "user"
@@ -309,9 +368,14 @@ msgstr "пользователь"
 #: src/bot.ts
 msgid "When moderators forward offtopic from the main chat to the helper chat, I rebuild it as a thread and leave a link behind.\n"
 "\n"
-"Operators: run /pair source and /pair target in the groups, then check /status.\n"
+"Operators: run /pair source and /pair target in the groups, or /pair forum in a forum group, then check /status.\n"
 "Guide: {operatorGuideUrl}"
 msgstr "Когда модераторы пересылают оффтоп из основного чата во вспомогательный, я собираю его в ветку и оставляю ссылку.\n"
 "\n"
-"Операторы: выполните /pair source и /pair target в группах, затем проверьте /status.\n"
+"Операторы: выполните /pair source и /pair target в группах или /pair forum в группе-форуме, затем проверьте /status.\n"
 "Руководство: {operatorGuideUrl}"
+
+#. Sent in the target chat when the person who forwarded no longer has permission to delete messages in the source chat. Nothing is deleted.
+#: src/bot/relocate/templates.ts
+msgid "You need permission to delete messages in the source chat to relocate these forwards. Nothing was deleted."
+msgstr "Чтобы перенести эти пересылки, нужно право удалять сообщения в исходном чате. Ничего не удалено."

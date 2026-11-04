@@ -57,6 +57,7 @@ describe("PGlite persistence smoke", () => {
       caption: null,
       contentFingerprint: contentFingerprint({ text: "hello" }),
       replyToMessageId: null,
+      topicId: null,
       forwardOrigin: null,
       raw: { text: "hello" },
     });
@@ -73,6 +74,7 @@ describe("PGlite persistence smoke", () => {
       caption: null,
       contentFingerprint: contentFingerprint({ text: "hello edited" }),
       replyToMessageId: null,
+      topicId: null,
       forwardOrigin: null,
       raw: { text: "hello edited" },
     });

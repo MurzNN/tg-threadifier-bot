@@ -1,4 +1,4 @@
-import { desc, eq } from "drizzle-orm";
+import { and, desc, eq, sql } from "drizzle-orm";
 
 import type { AppDb } from "./client.js";
 import { relocationJobs, threads } from "./schema.js";
@@ -29,6 +29,8 @@ export type RelocationPayload = {
   moderatorUserId: number;
   sourceChatId: number;
   targetChatId: number;
+  sourceTopicId?: number | null;
+  targetTopicId?: number | null;
   triggerMessageIds?: number[];
   items?: RelocationItem[];
   headerMessageId?: number;
@@ -49,6 +51,8 @@ export type RelocationJob = {
 export type StoredThread = {
   id: number;
   targetChatId: number;
+  /** Forum topic the header was posted in. Null is General or a non-forum chat. */
+  targetTopicId: number | null;
   rootMessageId: number;
   threadTitle: string;
   titleSource: string;
@@ -68,6 +72,7 @@ function mapThread(row: typeof threads.$inferSelect): StoredThread {
   return {
     id: row.id,
     targetChatId: row.targetChatId,
+    targetTopicId: row.targetTopicId,
     rootMessageId: row.rootMessageId,
     threadTitle: row.threadTitle,
     titleSource: row.titleSource,
@@ -117,6 +122,7 @@ export async function insertThread(
   db: AppDb,
   input: {
     targetChatId: number;
+    targetTopicId?: number | null;
     rootMessageId: number;
     threadTitle: string;
     titleSource: string;
@@ -127,6 +133,7 @@ export async function insertThread(
     .insert(threads)
     .values({
       targetChatId: input.targetChatId,
+      targetTopicId: input.targetTopicId ?? null,
       rootMessageId: input.rootMessageId,
       threadTitle: input.threadTitle,
       titleSource: input.titleSource,
@@ -152,16 +159,25 @@ export async function findThread(
   return row ? mapThread(row) : undefined;
 }
 
-/** Last threads in a target chat, newest first. Flow B and relocate attach use 5. */
+/**
+ * Last threads in a target chat, newest first. Flow B and relocate attach use 5.
+ * `targetTopicId` null matches General and non-forum threads (`IS NOT DISTINCT FROM`).
+ */
 export async function listRecentThreads(
   db: AppDb,
   targetChatId: number,
   limit = 5,
+  targetTopicId: number | null = null,
 ): Promise<StoredThread[]> {
   const rows = await db
     .select()
     .from(threads)
-    .where(eq(threads.targetChatId, targetChatId))
+    .where(
+      and(
+        eq(threads.targetChatId, targetChatId),
+        sql`${threads.targetTopicId} is not distinct from ${targetTopicId}`,
+      ),
+    )
     .orderBy(desc(threads.createdAt), desc(threads.id))
     .limit(limit);
   return rows.map(mapThread);

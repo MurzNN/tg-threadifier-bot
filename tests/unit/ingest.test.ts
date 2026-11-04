@@ -108,4 +108,44 @@ describe("ingest middleware", () => {
       "offtopic edited",
     );
   });
+
+  it("stores the forum topic id and ignores non-forum reply threads", async () => {
+    await bot.handleUpdate({
+      update_id: 5,
+      message: {
+        message_id: 70,
+        date: 1_700_000_100,
+        chat: { id: -1001, type: "supergroup", title: "Main" },
+        from: { id: 9, is_bot: false, first_name: "User" },
+        text: "in a topic",
+        is_topic_message: true,
+        message_thread_id: 15,
+      },
+    });
+    await bot.handleUpdate({
+      update_id: 6,
+      message: {
+        message_id: 71,
+        date: 1_700_000_101,
+        chat: { id: -1001, type: "supergroup", title: "Main" },
+        from: { id: 9, is_bot: false, first_name: "User" },
+        text: "general",
+      },
+    });
+    await bot.handleUpdate({
+      update_id: 7,
+      message: {
+        message_id: 72,
+        date: 1_700_000_102,
+        chat: { id: -1001, type: "supergroup", title: "Main" },
+        from: { id: 9, is_bot: false, first_name: "User" },
+        text: "reply thread",
+        message_thread_id: 99,
+      },
+    });
+
+    expect((await findMessage(handle.db, -1001, 70))?.topicId).toBe(15);
+    expect((await findMessage(handle.db, -1001, 71))?.topicId).toBeNull();
+    expect((await findMessage(handle.db, -1001, 72))?.topicId).toBeNull();
+  });
 });

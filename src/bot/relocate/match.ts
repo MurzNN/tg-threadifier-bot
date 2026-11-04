@@ -54,7 +54,24 @@ export type MatchFailureReason =
   | "not_found"
   | "ambiguous"
   | "foreign_origin"
-  | "unrecognized_origin";
+  | "unrecognized_origin"
+  | "same_topic"
+  | "mixed_topics";
+
+/**
+ * Forum pairs must match one source topic, and it must differ from the topic
+ * the moderator forwarded into. Returns null when the batch is acceptable.
+ */
+export function forumTopicMatch(input: {
+  sourceTopicIds: readonly (number | null)[];
+  targetTopicId: number | null;
+}): "same_topic" | "mixed_topics" | null {
+  const unique = new Set(input.sourceTopicIds);
+  if (unique.size !== 1) return "mixed_topics";
+  const sourceTopicId = [...unique][0] ?? null;
+  if (sourceTopicId === input.targetTopicId) return "same_topic";
+  return null;
+}
 
 export type ForwardMatch =
   | { ok: true; message: StoredMessage }

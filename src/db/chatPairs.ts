@@ -37,6 +37,13 @@ export type DeletePairsForChatResult = {
   blocked: number;
 };
 
+/** A forum pair relocates between topics of one group. */
+export function isForumPair(
+  pair: Pick<ChatPair, "sourceChatId" | "targetChatId">,
+): boolean {
+  return pair.sourceChatId === pair.targetChatId;
+}
+
 function mapRow(row: typeof chatPairs.$inferSelect): ChatPair {
   return {
     id: row.id,

@@ -23,13 +23,29 @@ msgstr "{0, plural, one {Déplacer # message dans un fil ?} other {Déplacer # m
 
 #. placeholder {0}: pair.id
 #: src/bot/commands/pair.ts
+msgid "#{0} (disabled, forum): {label}"
+msgstr "#{0} (désactivé, forum) : {label}"
+
+#. placeholder {0}: pair.id
+#: src/bot/commands/pair.ts
 msgid "#{0} (disabled): {source} → {target}"
 msgstr "#{0} (désactivé) : {source} → {target}"
 
 #. placeholder {0}: pair.id
 #: src/bot/commands/pair.ts
+msgid "#{0} (enabled, forum): {label}"
+msgstr "#{0} (activé, forum) : {label}"
+
+#. placeholder {0}: pair.id
+#: src/bot/commands/pair.ts
 msgid "#{0} (enabled): {source} → {target}"
 msgstr "#{0} (activé) : {source} → {target}"
+
+#. placeholder {0}: p.id
+#. placeholder {1}: p.sourceChatId
+#: src/bot/commands/pair.ts
+msgid "#{0}: forum {1}"
+msgstr "#{0} : forum {1}"
 
 #. Inline button in the helper chat. Opens a list of recent threads so the forwarded messages can be added to one of them.
 #: src/bot/relocate/templates.ts
@@ -97,15 +113,24 @@ msgid "Enabled pairs:\n"
 msgstr "Paires activées :\n"
 "{0}"
 
+#. placeholder {0}: pair.id
+#: src/bot/commands/pair.ts
+msgid "Forum mode enabled for this group (pair #{0}). Forwards between topics are relocated here."
+msgstr "Mode forum activé pour ce groupe (paire #{0}). Les transferts entre sujets sont relocalisés ici."
+
+#: src/bot/commands/pair.ts
+msgid "Forum mode only works in a group with topics enabled."
+msgstr "Le mode forum ne fonctionne que dans un groupe dont les sujets sont activés."
+
 #. Confirmation after the user picks a bot language. {languageName} is that language's own name, such as Español.
 #: src/bot/commands/language.ts
 msgid "Language set to {languageName}."
 msgstr "Langue définie : {languageName}."
 
-#. Telegram command menu description for /pair. Links a source chat and a target chat.
+#. Telegram command menu description for /pair. Links a source chat and a target chat, or enables forum mode in one group.
 #: src/bot/commands/menu.ts
-msgid "Link source and target chats"
-msgstr "Lier les chats source et cible"
+msgid "Link chats or enable forum mode"
+msgstr "Lier des chats ou activer le mode forum"
 
 #: src/bot/relocate/templates.ts
 msgid "Media message"
@@ -116,12 +141,12 @@ msgid "No chat pair includes this chat."
 msgstr "Aucune paire de chats n'inclut ce chat."
 
 #: src/bot/commands/pair.ts
-msgid "No chat pairs configured. Run /pair source and /pair target inside the group chats to link."
-msgstr "Aucune paire de chats configurée. Exécutez /pair source et /pair target dans les chats de groupe pour les lier."
+msgid "No chat pairs configured. Run /pair source and /pair target inside the group chats to link, or /pair forum in a forum group."
+msgstr "Aucune paire de chats configurée. Exécutez /pair source et /pair target dans les chats de groupe pour les lier, ou /pair forum dans un groupe forum."
 
 #: src/bot/commands/pair.ts
-msgid "No enabled chat pairs. Use /pair source and /pair target."
-msgstr "Aucune paire de chats activée. Utilisez /pair source et /pair target."
+msgid "No enabled chat pairs. Use /pair source and /pair target, or /pair forum."
+msgstr "Aucune paire de chats activée. Utilisez /pair source et /pair target, ou /pair forum."
 
 #. Callback alert when the moderator wants to attach forwards but this helper chat has no threads yet.
 #: src/bot/relocate/templates.ts
@@ -142,6 +167,10 @@ msgstr "Seule la personne qui a transféré ces messages peut choisir."
 #: src/bot/commands/pair.ts
 msgid "Pair enabled: source {0} → target {1}. Ingest is active for both chats."
 msgstr "Paire activée : origine {0} → cible {1}. L'enregistrement des messages est actif dans les deux chats."
+
+#: src/bot/commands/pair.ts
+msgid "Run /pair forum inside a forum group."
+msgstr "Exécutez /pair forum dans un groupe forum."
 
 #: src/bot/commands/pair.ts
 msgid "Run /pair source or /pair target inside the group chats to link."
@@ -172,8 +201,8 @@ msgid "Show the welcome message"
 msgstr "Afficher le message d'accueil"
 
 #: src/bot/commands/pair.ts
-msgid "Source and target must be different chats. Use /pair again in each chat."
-msgstr "La source et la cible doivent être des chats différents. Relancez /pair dans chaque chat."
+msgid "Source and target must be different chats. To relocate between topics in one forum group, run /pair forum there."
+msgstr "La source et la cible doivent être des chats différents. Pour relocaliser entre les sujets d'un groupe forum, exécutez-y /pair forum."
 
 #: src/bot/relocate/templates.ts
 msgid "source chat"
@@ -206,6 +235,11 @@ msgstr "Ce fil n'est plus disponible."
 msgid "The message \"{threadTitle}\" from <a href=\"{linkToUser}\">{userDisplayName}</a> with responses forwarded to the chat <a href=\"{linkToTargetChatThread}\">{targetChatName}</a>. Please continue the conversation there."
 msgstr "Le message « {threadTitle} » de <a href=\"{linkToUser}\">{userDisplayName}</a>, avec les réponses, a été transféré vers le chat <a href=\"{linkToTargetChatThread}\">{targetChatName}</a>. Poursuivez la conversation là-bas."
 
+#. Notice in the source forum topic. The link opens the new reply thread in another topic of the same group. Thread means a reply thread, not a forum topic.
+#: src/bot/relocate/templates.ts
+msgid "The message \"{threadTitle}\" from <a href=\"{linkToUser}\">{userDisplayName}</a> with responses moved to <a href=\"{linkToTargetChatThread}\">a thread in another topic</a>. Please continue the conversation there."
+msgstr "Le message « {threadTitle} » de <a href=\"{linkToUser}\">{userDisplayName}</a>, avec les réponses, a été déplacé vers <a href=\"{linkToTargetChatThread}\">un fil dans un autre sujet</a>. Poursuivez la conversation là-bas."
+
 #. placeholder {0}: pairs.length
 #. placeholder {1}: blocks.join("\n\n")
 #: src/bot/commands/pair.ts
@@ -214,14 +248,30 @@ msgid "This chat is in {0} pairs:\n"
 msgstr "Ce chat figure dans {0} paires :\n"
 "{1}"
 
+#. placeholder {0}: pair.id
+#: src/bot/commands/pair.ts
+msgid "This chat is in forum mode in pair #{0} (disabled)."
+msgstr "Ce chat est en mode forum dans la paire #{0} (désactivé)."
+
+#. placeholder {0}: pair.id
+#: src/bot/commands/pair.ts
+msgid "This chat is in forum mode in pair #{0} (enabled)."
+msgstr "Ce chat est en mode forum dans la paire #{0} (activé)."
+
+#. placeholder {0}: here.id
+#. placeholder {1}: here.sourceChatId
+#: src/bot/commands/pair.ts
+msgid "This chat is in forum mode in pair #{0}: {1}."
+msgstr "Ce chat est en mode forum dans la paire #{0} : {1}."
+
 #. placeholder {0}: enabled.length
 #: src/bot/commands/pair.ts
 msgid "This chat is not in an enabled pair. Enabled pairs: {0}."
 msgstr "Ce chat ne fait pas partie d'une paire activée. Paires activées : {0}."
 
 #: src/bot/commands/pair.ts
-msgid "This chat is not paired. Admins can run /pair source or /pair target here."
-msgstr "Ce chat n'est pas apparié. Les administrateurs peuvent exécuter /pair source ou /pair target ici."
+msgid "This chat is not paired. Admins can run /pair source, /pair target, or /pair forum here."
+msgstr "Ce chat n'est pas apparié. Les administrateurs peuvent exécuter /pair source, /pair target ou /pair forum ici."
 
 #. placeholder {0}: here.id
 #. placeholder {1}: here.sourceChatId
@@ -284,6 +334,15 @@ msgstr "Cette source et cette cible sont déjà associées par un autre utilisat
 msgid "Thread: {threadTitle}"
 msgstr "Fil : {threadTitle}"
 
+#. Thread header in a forum topic. The link is another topic in the same group, not a different chat. Thread means a reply thread, not a forum topic.
+#: src/bot/relocate/templates.ts
+msgid "Thread: {threadTitle}\n"
+"Initiated by the user <a href=\"{linkToUser}\">{userDisplayName}</a> in <a href=\"{linkToSourceChat}\">another topic</a>.\n"
+"<a href=\"{threadLink}\">Thread link</a>."
+msgstr "Fil : {threadTitle}\n"
+"Initié par l'utilisateur <a href=\"{linkToUser}\">{userDisplayName}</a> dans <a href=\"{linkToSourceChat}\">un autre sujet</a>.\n"
+"<a href=\"{threadLink}\">Lien du fil</a>."
+
 #: src/bot/relocate/templates.ts
 msgid "Thread: {threadTitle}\n"
 "Initiated by the user <a href=\"{linkToUser}\">{userDisplayName}</a> in the chat <a href=\"{linkToSourceChat}\">{sourceChatName}</a>.\n"
@@ -298,8 +357,8 @@ msgid "Thread: {threadTitle12}"
 msgstr "Fil : {threadTitle12}"
 
 #: src/bot/commands/pair.ts
-msgid "Usage: /pair source or /pair target (run inside the group). /pair alone shows pairing status."
-msgstr "Utilisation : /pair source ou /pair target (à lancer dans le groupe). /pair seul affiche l'état de l'appariement."
+msgid "Usage: /pair source, /pair target, or /pair forum (run inside the group). /pair alone shows pairing status."
+msgstr "Utilisation : /pair source, /pair target ou /pair forum (à lancer dans le groupe). /pair seul affiche l'état de l'appariement."
 
 #: src/bot/relocate/templates.ts
 msgid "user"
@@ -309,9 +368,14 @@ msgstr "utilisateur"
 #: src/bot.ts
 msgid "When moderators forward offtopic from the main chat to the helper chat, I rebuild it as a thread and leave a link behind.\n"
 "\n"
-"Operators: run /pair source and /pair target in the groups, then check /status.\n"
+"Operators: run /pair source and /pair target in the groups, or /pair forum in a forum group, then check /status.\n"
 "Guide: {operatorGuideUrl}"
 msgstr "Lorsque les modérateurs transfèrent le hors-sujet du chat principal vers le chat d'aide, je le reconstitue en fil et je laisse un lien.\n"
 "\n"
-"Opérateurs : lancez /pair source et /pair target dans les groupes, puis consultez /status.\n"
+"Opérateurs : lancez /pair source et /pair target dans les groupes, ou /pair forum dans un groupe forum, puis consultez /status.\n"
 "Guide : {operatorGuideUrl}"
+
+#. Sent in the target chat when the person who forwarded no longer has permission to delete messages in the source chat. Nothing is deleted.
+#: src/bot/relocate/templates.ts
+msgid "You need permission to delete messages in the source chat to relocate these forwards. Nothing was deleted."
+msgstr "Vous devez avoir le droit de supprimer des messages dans le chat source pour relocaliser ces transferts. Rien n'a été supprimé."

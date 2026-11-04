@@ -4,6 +4,7 @@ import type { Bot, Context } from "grammy";
 import {
   deletePairsForChat,
   findEnabledPairForChat,
+  isForumPair,
   listChatPairsForUser,
   listEnabledPairs,
   listEnabledPairsForUser,
@@ -33,7 +34,7 @@ async function completeIfReady(
   }
   if (draft.sourceChatId === draft.targetChatId) {
     await ctx.reply(
-      t`Source and target must be different chats. Use /pair again in each chat.`,
+      t`Source and target must be different chats. To relocate between topics in one forum group, run /pair forum there.`,
     );
     drafts.clear(operatorId);
     return true;
@@ -73,6 +74,11 @@ function chatLabel(title: string | null, chatId: number): string {
 }
 
 function formatConfiguredPair(pair: ChatPair): string {
+  if (isForumPair(pair)) {
+    const label = chatLabel(pair.sourceTitle, pair.sourceChatId);
+    if (pair.enabled) return t`#${pair.id} (enabled, forum): ${label}`;
+    return t`#${pair.id} (disabled, forum): ${label}`;
+  }
   const source = chatLabel(pair.sourceTitle, pair.sourceChatId);
   const target = chatLabel(pair.targetTitle, pair.targetChatId);
   if (pair.enabled) {
@@ -82,6 +88,12 @@ function formatConfiguredPair(pair: ChatPair): string {
 }
 
 function formatChatPairStatus(pair: ChatPair, chatId: number): string {
+  if (isForumPair(pair)) {
+    if (pair.enabled) {
+      return t`This chat is in forum mode in pair #${pair.id} (enabled).`;
+    }
+    return t`This chat is in forum mode in pair #${pair.id} (disabled).`;
+  }
   const source = chatLabel(pair.sourceTitle, pair.sourceChatId);
   const target = chatLabel(pair.targetTitle, pair.targetChatId);
   if (pair.sourceChatId === chatId) {
@@ -104,7 +116,7 @@ async function replyPairStatus(ctx: Context, db: AppDb): Promise<void> {
     const pairs = await listChatPairsForUser(db, ctx.from.id);
     if (pairs.length === 0) {
       await ctx.reply(
-        t`No chat pairs configured. Run /pair source and /pair target inside the group chats to link.`,
+        t`No chat pairs configured. Run /pair source and /pair target inside the group chats to link, or /pair forum in a forum group.`,
       );
       return;
     }
@@ -117,7 +129,7 @@ async function replyPairStatus(ctx: Context, db: AppDb): Promise<void> {
   const pairs = await listPairsForChat(db, chatId);
   if (pairs.length === 0) {
     await ctx.reply(
-      t`This chat is not paired. Admins can run /pair source or /pair target here.`,
+      t`This chat is not paired. Admins can run /pair source, /pair target, or /pair forum here.`,
     );
     return;
   }
@@ -144,9 +156,9 @@ export function registerPairCommands(
       await replyPairStatus(ctx, db);
       return;
     }
-    if (role !== "source" && role !== "target") {
+    if (role !== "source" && role !== "target" && role !== "forum") {
       await ctx.reply(
-        t`Usage: /pair source or /pair target (run inside the group). /pair alone shows pairing status.`,
+        t`Usage: /pair source, /pair target, or /pair forum (run inside the group). /pair alone shows pairing status.`,
       );
       return;
     }
@@ -156,8 +168,41 @@ export function registerPairCommands(
     }
     if (ctx.chat.type === "private") {
       await ctx.reply(
-        t`Run /pair source or /pair target inside the group chats to link.`,
+        role === "forum"
+          ? t`Run /pair forum inside a forum group.`
+          : t`Run /pair source or /pair target inside the group chats to link.`,
       );
+      return;
+    }
+
+    if (role === "forum") {
+      if (!("is_forum" in ctx.chat) || ctx.chat.is_forum !== true) {
+        await ctx.reply(t`Forum mode only works in a group with topics enabled.`);
+        return;
+      }
+      const operatorId = ctx.from.id;
+      try {
+        const pair = await upsertChatPair(db, {
+          sourceChatId: ctx.chat.id,
+          targetChatId: ctx.chat.id,
+          configuredByUserId: operatorId,
+          sourceTitle: chatTitle(ctx),
+          targetTitle: chatTitle(ctx),
+          sourceUsernameOrPath: chatUsernameOrPath(ctx),
+          enabled: true,
+        });
+        await ctx.reply(
+          t`Forum mode enabled for this group (pair #${pair.id}). Forwards between topics are relocated here.`,
+        );
+      } catch (error) {
+        if (error instanceof PairOwnedByAnotherUserError) {
+          await ctx.reply(
+            t`This source and target are already paired by another user.`,
+          );
+          return;
+        }
+        throw error;
+      }
       return;
     }
 
@@ -226,6 +271,12 @@ export function registerPairCommands(
         );
         return;
       }
+      if (isForumPair(here)) {
+        await ctx.reply(
+          t`This chat is in forum mode in pair #${here.id}: ${here.sourceChatId}.`,
+        );
+        return;
+      }
       const role =
         here.sourceChatId === ctx.chat.id
           ? "source"
@@ -241,12 +292,14 @@ export function registerPairCommands(
     const pairs = await listEnabledPairsForUser(db, ctx.from.id);
     if (pairs.length === 0) {
       await ctx.reply(
-        t`No enabled chat pairs. Use /pair source and /pair target.`,
+        t`No enabled chat pairs. Use /pair source and /pair target, or /pair forum.`,
       );
       return;
     }
-    const lines = pairs.map(
-      (p) => `#${p.id}: ${p.sourceChatId} → ${p.targetChatId}`,
+    const lines = pairs.map((p) =>
+      isForumPair(p)
+        ? t`#${p.id}: forum ${p.sourceChatId}`
+        : `#${p.id}: ${p.sourceChatId} → ${p.targetChatId}`,
     );
     await ctx.reply(t`Enabled pairs:\n${lines.join("\n")}`);
   });

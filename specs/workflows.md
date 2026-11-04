@@ -52,6 +52,8 @@ Before posting the thread header and source notice, the bot resolves one title, 
 **Actor:** Moderator  
 **Trigger:** Moderator selects one or more messages in `sourceChat` and forwards them to `targetChat` (as a single forward or a bundle).
 
+The forwarder must be allowed to **delete messages in `sourceChat`**. Telegram status `creator` is allowed (Bot API does not expose `can_delete_messages` on that status). An `administrator` is allowed only when `can_delete_messages` is true. Any other status, and a failed member lookup, is ignored: the forward is not batched, nothing is posted, and nothing is deleted. The same check runs again when that person confirms, sets a title, attaches, or discards, so a demotion cannot finish a draft that was opened while they still had the right. `/pair`, `/pair forum`, and `/unpair` stay on `creator` or `administrator` and do not use this gate.
+
 ### Steps
 
 1. **Moderator forwards** selected messages from `sourceChat` → `targetChat`.
@@ -85,9 +87,9 @@ Before posting the thread header and source notice, the bot resolves one title, 
    - `https://t.me/c/1234567890/5678?thread=5678` (private / internal link forms as applicable)
    - `https://t.me/chat_path/5678?thread=5678`
 
-   Reference: [Telegram links](https://core.telegram.org/api/links).
+   Reference: [Telegram links](https://core.telegram.org/api/links). In a forum, omit `?thread=` and use the topic path described under Forum mode.
 
-6. **Bot forwards** all other messages in the moderated set (excluding the root already represented in the header) **into that thread** in `targetChat`. When the moderator attached the bundle to an existing thread, every matched message is copied, including the root. The header message is the reply-thread root (`?thread=` is that message id). This is not a forum topic. Each copied message keeps its original author as a suffix on the text or caption: `— {authorName}`, linked to that user when the id is known.
+6. **Bot forwards** all other messages in the moderated set (excluding the root already represented in the header) **into that thread** in `targetChat`. When the moderator attached the bundle to an existing thread, every matched message is copied, including the root. The header message is the reply-thread root. Flow A does not create a forum topic. In a non-forum chat, `?thread=` is that header id. In a forum, the reply thread is posted inside the destination topic. Each copied message keeps its original author as a suffix on the text or caption: `— {authorName}`, linked to that user when the id is known.
 7. **Bot deletes** in `targetChat` the temporary forwarded copies that the moderator used as the trigger (they have been re-emitted by the bot).
 8. **Bot deletes** in `sourceChat` all messages that were part of the forwarded set.
 9. **Bot posts** in `sourceChat` a redirect notice:
@@ -103,6 +105,18 @@ Before posting the thread header and source notice, the bot resolves one title, 
 - Target has a durable thread (header + replies) with a readable title.
 - Source no longer contains the offtopic cluster; members see where to continue.
 - Moderator did not hand-edit links or re-forward piece by piece.
+
+### Forum mode
+
+A forum pair is a `chat_pairs` row with `source_chat_id == target_chat_id`, created by `/pair forum` in a group that has topics enabled. The same Flow A runs inside that group: the topic the moderator forwards **into** is the target topic, and the topic the stored originals live in is the source topic.
+
+- A message's topic id is `message_thread_id` only when `is_topic_message` is true. `null` means the General topic, or a non-forum chat. Non-forum supergroups also set `message_thread_id` on ordinary reply threads, so that field is not a topic id by itself.
+- Confirmation, the header, copies, and failure notices are sent with `message_thread_id` of the target topic. The redirect notice uses the source topic. Sends omit `message_thread_id` when the topic id is `null`.
+- The header says the discussion was initiated in **another topic** (not another chat). The notice says the messages moved to **a thread in another topic**.
+- Inside a forum, `?thread=` means the topic, not a reply thread. The header link is `https://t.me/{chatPath}/{topicId}/{messageId}` when the target topic id is set, and `https://t.me/{chatPath}/{messageId}` when the target is General. Neither form adds `?thread=`. Verify `t.me/c/{path}/{topic}/{msg}` on Test DC before release.
+- Matching uses the same chat, excludes the batch's own trigger message ids (ingest stores the forward before matching), requires every matched message to share one source topic, and requires that topic to differ from the target topic. `same_topic` and `mixed_topics` are match failures: nothing is deleted and the existing missing-history notice is shown.
+- Enabling forum mode soft-disables any other enabled pair that targets this chat. The group can still be the source of a pair whose target is a different chat.
+- A cross-group pair also sends into topics: the header and confirmation use the topic the moderator forwarded into, and the notice uses the source message's topic. Those templates keep the chat-name wording.
 
 ### Edge cases (to handle in implementation)
 
@@ -123,6 +137,10 @@ Before posting the thread header and source notice, the bot resolves one title, 
 | Media / stickers / albums | Non-root messages are copied into the reply thread, including stickers and files. Photos and other captionable media get the same `— {authorName}` suffix as text. Stickers and other types with nowhere to put text are copied without that line. A media-only root is represented only by the “Media message” label and is not copied again. Album grouping may split into separate replies |
 | AI timeout / error | Fall back to no-AI title resolution; do not block relocate |
 | AI disabled | Truncate / use message text only (120 characters for automatic `{threadTitle}`). A custom title is not truncated |
+| Forum: forwards stay in the same topic | Match failure (`same_topic`). Nothing is deleted |
+| Forum: matched messages come from more than one topic | Match failure (`mixed_topics`). Nothing is deleted |
+| Forwarder cannot delete messages in the source chat | Ignore the forward for both forum and cross-group pairs. Nothing is posted or deleted |
+| Confirm or discard after that right is removed | Leave every message in place and tell the moderator in the target topic. The draft stays |
 
 ---
 
@@ -182,7 +200,7 @@ On startup the bot publishes its command menu with `setMyCommands` for private c
 
 | Command | Who | Behavior |
 |---------|-----|----------|
-| `/start` | Anyone | Welcome text: what members see after a relocate, then a short operator note (`/pair source`, `/pair target`, `/status`) and a link to the operator guide. Uses this chat's language when one is set, otherwise the caller's account language. Stores `user_settings.locale` from the account `language_code` when the base language is `en`, `es`, `fr`, or `ru` (`es-MX` counts as `es`). Any other code stores `en`. This does not replace a `/language` choice for the chat. |
+| `/start` | Anyone | Welcome text: what members see after a relocate, then a short operator note (`/pair source`, `/pair target`, `/pair forum` in a forum group, `/status`) and a link to the operator guide. Uses this chat's language when one is set, otherwise the caller's account language. Stores `user_settings.locale` from the account `language_code` when the base language is `en`, `es`, `fr`, or `ru` (`es-MX` counts as `es`). Any other code stores `en`. This does not replace a `/language` choice for the chat. |
 | `/language` | Anyone | Shows English, Español, Français, and Русский for this chat. A button or a code (`/language fr`) stores `chat_settings.locale`. An unknown code does not change it. Another chat keeps its own language. |
 | `/pair`, `/status`, `/unpair` | See Flow C | The reply uses this chat's locale, then the caller's `user_settings.locale`, then the account language. Reading those commands does not write a row. |
 
@@ -200,13 +218,14 @@ Until the Mini App lands, operators configure a pair with:
 | Mechanism | Behavior |
 |-----------|----------|
 | Env seed | On boot, if `SOURCE_CHAT_ID`, `TARGET_CHAT_ID`, and `CONFIGURED_BY_USER_ID` are set, upsert an enabled `chat_pairs` row owned by that user (idempotent for the same owner). |
-| `/pair` | No arguments. In a private chat: list the caller's stored pairs (id, enabled or disabled, source and target titles and ids). In a group: report this chat's pairing — its role, whether the pair is enabled, and both chats' titles and ids, including pairs configured by other users. If the chat is in more than one pair, list each. Anyone who can send the command may read this; it does not change config. |
+| `/pair` | No arguments. In a private chat: list the caller's stored pairs (id, enabled or disabled, source and target titles and ids). A forum pair is listed as forum mode instead of a source → target role. In a group: report this chat's pairing — its role, whether the pair is enabled, and both chats' titles and ids, including pairs configured by other users. A forum pair says this chat is in forum mode. If the chat is in more than one pair, list each. Anyone who can send the command may read this; it does not change config. |
 | `/pair source` | In a group where the caller is admin: set this chat as `sourceChat` (completes or updates the caller's pair). |
-| `/pair target` | Same for `targetChat`. Completing a pair soft-disables any other enabled pair that already uses the same `targetChat`. If that exact source and target already belong to another user, reply with an error and leave the row unchanged. |
-| `/status` | In a group: show the enabled pair for this chat (ids) and whether this chat is source, target, or neither. In a private chat: list the caller's enabled pairs. |
+| `/pair target` | Same for `targetChat`. Completing a pair soft-disables any other enabled pair that already uses the same `targetChat`. If that exact source and target already belong to another user, reply with an error and leave the row unchanged. Using the same chat as source and target is an error that points at `/pair forum`. |
+| `/pair forum` | In a group with topics enabled (`is_forum`) where the caller is admin: upsert an enabled pair whose source and target are both this chat. Soft-disables any other enabled pair that targets this chat. Rejected in a private chat and in a group that is not a forum. The same other-user ownership error applies. Does not use the in-memory `/pair` draft. |
+| `/status` | In a group: show the enabled pair for this chat (ids) and whether this chat is source, target, forum mode, or neither. In a private chat: list the caller's enabled pairs, including forum pairs. |
 | `/unpair` | Delete the caller's pairs that include this chat. Another user's pair is left in place and the reply says it belongs to that user. |
 
-Admin check uses Telegram chat member status (`creator` / `administrator`). Bot must already be a member of both chats. Message ingest starts for chats that appear in an enabled pair. At most one enabled pair may share a given `targetChat`.
+Admin check for `/pair source`, `/pair target`, `/pair forum`, and `/unpair` uses Telegram chat member status (`creator` / `administrator`). Bot must already be a member of both chats (the same chat, twice, for forum mode). Message ingest starts for chats that appear in an enabled pair. At most one enabled pair may share a given `targetChat`.
 
 When Telegram upgrades a basic group to a supergroup, the chat id changes. The bot listens for `migrate_to_chat_id` (in the old group) and `migrate_from_chat_id` (in the new supergroup) and rewrites that id in `chat_pairs`, `chat_settings`, stored `messages`, `threads`, unfinished `relocation_jobs` payloads, and any in-memory `/pair` draft so the pair stays linked without re-running `/pair`. If remapping would collide with an existing `(source, target)` row, the remapped row is soft-disabled and the existing row is kept. A `chat_settings` row already stored under the new id is kept, and the old row is dropped.
 
@@ -237,16 +256,18 @@ Normative scenario IDs for automated tests. Full harness, emulator vs Test DC de
 | `A2_single_message` | A | Single-message relocate still cleans up and announces |
 | `A3_match_failure_safe` | A | Match failure → **no deletes** |
 | `A4_ai_title_optional` | A | With AI mocked/enabled: header/notice use generated topic; with AI failure: truncate fallback |
+| `A5_forum_topic_relocate` | A | Forum pair: header and copies land in the destination topic, the notice lands in the origin topic, and the link has no `?thread=` |
 | `B1_loose_pick_thread` | B | Loose message attached to recent thread; prompt cleaned |
 | `B2_loose_create_thread` | B | Loose message starts a new thread; original cleaned |
 | `C1_pair_config` | C | Source/target pair persisted and used for ingest |
 | `C2_template_override` | C | Custom template used when posting; reset restores translated default |
+| `C3_pair_forum` | C | `/pair forum` persists source = target in a forum and is rejected in a non-forum chat |
 
 ### Flow A observables (Test DC / acceptance)
 
 For `A1` / `A2`, each destructive step must be checkable:
 
-1. Header posted → assert link format (`?thread=`) and expected HTML/Lingui substrings (including resolved `{threadTitle}`).
+1. Header posted → assert link format (`?thread=` outside a forum; topic path with no `?thread=` for `A5`) and expected HTML/Lingui substrings (including resolved `{threadTitle}`).
 2. Thread replies present → assert count and order.
 3. Temp forwards gone from target.
 4. Source messages gone; notice present with correct deep link and `{threadTitle}`.

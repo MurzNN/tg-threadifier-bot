@@ -18,7 +18,9 @@ Add the bot to both chats. It typically needs to:
 
 Give the bot admin rights (or equivalent) in both chats so delete and post succeed.
 
-The **helper chat** should be a **supergroup**, not a forum. Threads are reply threads on the header message (`?thread=`), not forum topics.
+The helper chat can be a **supergroup** or a **forum**. In a supergroup the thread is a reply thread on the header message (`?thread=`). In a forum, enable forum mode (below) and the header is posted in the destination topic. The bot does not create a new topic.
+
+A person starts a relocate only when they can **delete messages** in the main chat (the chat owner, or an administrator with that right). Forwarding alone is not enough.
 
 ## Pair chats
 
@@ -28,11 +30,14 @@ Run these in the groups themselves (you must be an admin for the mutating comman
 |---------|--------|
 | `/pair source` | Mark this group as the main chat. |
 | `/pair target` | Mark this group as the helper chat. |
-| `/pair` | List your pairs (private chat) or this chat’s pairing (in a group). Anyone can read; it does not change config. |
-| `/status` | In a group, show the enabled pair and whether this chat is main, helper, or neither. In a private chat, list your enabled pairs. |
+| `/pair forum` | In a group with topics enabled, mark this group as its own main and helper chat. Forwards from one topic to another topic then run a relocate inside the destination topic. |
+| `/pair` | List your pairs (private chat) or this chat’s pairing (in a group). A forum pair is shown as forum mode. Anyone can read; it does not change config. |
+| `/status` | In a group, show the enabled pair and whether this chat is main, helper, forum mode, or neither. In a private chat, list your enabled pairs. |
 | `/unpair` | Delete your pairs that include this chat. |
 
-Each pair belongs to the admin who configured it. If another admin already paired the same main and helper chats, the bot refuses the new pair and leaves the existing one. Completing a pair soft-disables any other enabled pair that already uses the same helper chat. At most one enabled pair may share a given helper chat.
+Each pair belongs to the admin who configured it. If another admin already paired the same main and helper chats, the bot refuses the new pair and leaves the existing one. Completing a pair soft-disables any other enabled pair that already uses the same helper chat. At most one enabled pair may share a given helper chat. `/pair forum` counts: it turns off a cross-group pair that uses this group as the helper. The group can still be the main chat of a pair whose helper is a different chat.
+
+`/pair forum` works only in a forum (topics enabled). The bot needs the same post, copy, and delete rights there. Topics themselves need no extra pairing.
 
 When Telegram upgrades a basic group to a supergroup, the chat id changes. The bot remaps stored ids so you usually do not need to re-run `/pair`.
 
@@ -42,7 +47,7 @@ When Telegram upgrades a basic group to a supergroup, the chat id changes. The b
 |---------|--------|
 | `/language` | Choose English, Español, Français, or Русский for **this chat**. |
 | `/language fr` | Same, with a language code shortcut. |
-| `/start` | Welcome text: what members see after a relocate, then `/pair source`, `/pair target`, and `/status`, plus a link to this guide. May store a personal language fallback from the Telegram account when the bot supports that language. |
+| `/start` | Welcome text: what members see after a relocate, then `/pair source`, `/pair target`, `/pair forum`, and `/status`, plus a link to this guide. May store a personal language fallback from the Telegram account when the bot supports that language. |
 
 Thread headers follow the helper chat’s language. Redirect notices follow the main chat’s language. With no chat language set, English defaults are used.
 

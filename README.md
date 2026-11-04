@@ -49,7 +49,7 @@ nub run dev            # long polling + GET /health on PORT (default 3000)
 
 Useful scripts: `nub run typecheck`, `nub run lint`, `nub run i18n:extract`, `nub run db:studio` (local PGlite at `file:./data/threadifier-pg` unless `DATABASE_URL` is a Postgres URL), `nub run build` / `nub run start`. Nub loads `.env` automatically when running scripts/files.
 
-Operators bind chats with `/pair source` and `/pair target` (or `SOURCE_CHAT_ID` / `TARGET_CHAT_ID` / `CONFIGURED_BY_USER_ID`), review their own pairs with `/pair` or `/status`, and delete them with `/unpair` until the Mini App (M4). `/language` sets the command language for the current chat. `/start` stores a fallback from the Telegram account when the bot ships that language, otherwise English, for chats that have not chosen one.
+Operators bind chats with `/pair source` and `/pair target`, or enable `/pair forum` in a forum group (or `SOURCE_CHAT_ID` / `TARGET_CHAT_ID` / `CONFIGURED_BY_USER_ID`), review their own pairs with `/pair` or `/status`, and delete them with `/unpair` until the Mini App (M4). `/language` sets the command language for the current chat. `/start` stores a fallback from the Telegram account when the bot ships that language, otherwise English, for chats that have not chosen one.
 
 ### Docker & Helm
 
@@ -91,7 +91,7 @@ End-user instructions for members, moderators, and operators: [https://murznn.gi
 
 ## Contributing
 
-Use [Conventional Commits](https://www.conventionalcommits.org/) and short-lived branches off `main`. See [specs/contributing.md](specs/contributing.md).
+Use [Conventional Commits](https://www.conventionalcommits.org/). Every feature and every fix lands on its own short-lived branch off `main` and goes through a GitHub pull request. See [specs/contributing.md](specs/contributing.md).
 
 ## License
 
@@ -106,6 +106,6 @@ Typical requirements (exact set finalized during implementation):
 - Post messages (including HTML links) in both chats
 - Copy messages into the target thread (`copyMessage`)
 
-The bot account must be an admin (or have sufficient rights) in both chats. The target should be a supergroup, not a forum: the thread is a reply thread on the header message.
+The bot account must be an admin (or have sufficient rights) in both chats. The target can be a supergroup or a forum. Outside a forum the thread is a reply thread on the header message (`?thread=`). In a forum, `/pair forum` makes that group both source and target, and the header is posted in the destination topic.
 
-Anyone who can forward source messages into the target starts a relocate, so keep that chat to moderators.
+A relocate starts only when the sender can delete messages in the source chat and can forward into the target, so keep that chat to moderators.

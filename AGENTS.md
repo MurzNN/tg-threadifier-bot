@@ -23,13 +23,13 @@ Primary stack: **TypeScript** + **GrammY** + **Hono** + **Drizzle** + **Lingui**
 
 1. **Read specs before inventing behavior.** Workflows and message templates in `specs/workflows.md` and `specs/architecture.md` are normative.
 2. **Reuse open-source libraries** instead of reinventing wheels. Prefer the locked stack in `specs/architecture.md` (GrammY, Hono, Drizzle, Zod, pino, Lingui, Vitest, mtcute for E2E only) over custom code.
-3. **Do not invent Telegram Bot API capabilities.** History is not fetchable via Bot API — messages must be persisted locally as they arrive. Thread links follow Telegram deep-link rules (`?thread=`).
+3. **Do not invent Telegram Bot API capabilities.** History is not fetchable via Bot API — messages must be persisted locally as they arrive. Thread links follow Telegram deep-link rules (`?thread=` outside a forum; a topic path with no `?thread=` inside a forum).
 4. **Keep the moderator trigger simple:** detection starts when messages **forwarded from `sourceChat`** appear in `targetChat` (match by author, content, timestamps against the local store).
 5. **Prefer GrammY idioms** (middleware, conversations/plugins, typed context) over ad-hoc polling wrappers.
 6. **All defaults translatable; templates overridable** — no hardcoded bot/Mini App copy; Lingui for defaults + UI; operators may override bot message templates in the Mini App (same `{camelCase}` placeholders). Resolution: override → locale default → `en`. Optional AI titles are opt-in with truncate fallback — never block relocate on AI failure. When editing `src/locales/*/messages.po`, apply [src/locales/GLOSSARY.md](src/locales/GLOSSARY.md) and inflect the preferred lemma.
 7. **Testability first:** scenario IDs in workflows Flow D; PR CI = unit + emulator; release = Test DC E2E. No hard-coded production chat IDs. See `specs/testing.md`.
 8. **Config via Mini App / bot UI**, not only env vars — operators link chats, set locale, and edit templates. Mini App is a static React+Vite SPA (no SSR unless roadmap says otherwise).
-9. **Git:** Conventional Commits and short-lived branches per `specs/contributing.md`. Releases use **release-it** (changelog + GitHub Release + GHCR image) — prefer `feat`/`fix` when a version bump is intended. Commit only when the user asks; never force-push `main` or skip hooks unless explicitly requested.
+9. **Git:** Conventional Commits per `specs/contributing.md`. Every feature and every fix is its own short-lived branch off `main` (`feat/<short-topic>` or `fix/<short-topic>`; docs-only `docs/`, test-only `test/`). That branch goes through a GitHub pull request; do not merge it by pushing to `main`. CI (unit tests and the emulator integration) must pass. One branch is one concern. Releases use **release-it** (changelog + GitHub Release + GHCR image) — prefer `feat`/`fix` when a version bump is intended. Commit only when the user asks; never force-push `main` or skip hooks unless explicitly requested.
 10. **No drive-by scope:** stick to the roadmap; extra features stay behind explicit milestones.
 11. When changing behavior, update the matching spec (`workflows`, `architecture`, `testing`, or `roadmap`) in the same change set. When changing how members, moderators, or operators use the bot, update the matching pages under `docs/src/content/docs/` as well.
 
@@ -46,7 +46,7 @@ Read only:
 Defaults unless the task says otherwise:
 
 - Command replies are plain `ctx.reply` text.
-- A no-argument read (`/pair`, `/status`) is available to anyone who can send it. `/pair source`, `/pair target`, and `/unpair` stay admin-gated.
+- A no-argument read (`/pair`, `/status`) is available to anyone who can send it. `/pair source`, `/pair target`, `/pair forum`, and `/unpair` stay admin-gated.
 - Each `chat_pairs` row is owned by `configured_by_user_id`. Private `/pair` and `/status` list that user's rows. `/unpair` deletes the caller's rows for the current chat. Creating the same source and target as another user is an error and does not change the existing row.
 
 After user-facing copy changes:

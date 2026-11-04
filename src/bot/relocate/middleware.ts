@@ -1,5 +1,6 @@
 import type { Bot, Context, MiddlewareFn } from "grammy";
 
+import { canDeleteMessages } from "../admin.js";
 import { findEnabledPairByTarget } from "../../db/chatPairs.js";
 import { localeForChat } from "../../db/chatSettings.js";
 import type { AppDb } from "../../db/client.js";
@@ -10,6 +11,8 @@ import {
   mediaUniqueIds,
   messageCaption,
   messageText,
+  messageTopicId,
+  topicParams,
 } from "../../lib/telegramMessage.js";
 import type { Logger } from "../../logger.js";
 import { ForwardBatcher, BATCH_WINDOW_MS } from "./batcher.js";
@@ -33,6 +36,7 @@ import {
   renderConfirmExpired,
   renderNoRecentThreads,
   renderOnlyForwarder,
+  renderPermissionDenied,
   renderThreadUnavailable,
 } from "./templates.js";
 
@@ -85,8 +89,11 @@ export function registerRelocate(
       if (fresh.length === 0 || !fresh[0]) return;
       const head = fresh[0];
       try {
-        await drafts.runExclusive(head.targetChatId, head.moderatorUserId, () =>
-          acceptBatch(deps, drafts, fresh),
+        await drafts.runExclusive(
+          head.targetChatId,
+          head.targetTopicId,
+          head.moderatorUserId,
+          () => acceptBatch(deps, drafts, fresh),
         );
       } catch (err) {
         logger.error({ err }, "relocation batch failed");
@@ -106,9 +113,10 @@ export function registerRelocate(
     }
     const draft = drafts.getById(parsed.draftId);
     const lockChat = draft?.targetChatId ?? chatId;
+    const lockTopic = draft?.targetTopicId ?? null;
     const lockUser = draft?.moderatorUserId ?? userId;
     try {
-      await drafts.runExclusive(lockChat, lockUser, async () => {
+      await drafts.runExclusive(lockChat, lockTopic, lockUser, async () => {
         const current = drafts.getById(parsed.draftId);
         if (!current || current.targetChatId !== chatId) {
           await ctx.answerCallbackQuery({
@@ -140,29 +148,43 @@ export function registerRelocate(
       if (msg && ctx.chat && msg.from && !msg.from.is_bot && msg.forward_origin) {
         const pair = await findEnabledPairByTarget(db, ctx.chat.id);
         if (pair) {
-          const pending: PendingForward = {
-            targetChatId: ctx.chat.id,
-            targetTitle: chatTitle(ctx.chat),
-            targetUsername: chatUsername(ctx.chat),
-            moderatorUserId: msg.from.id,
-            triggerMessageId: msg.message_id,
-            text: messageText(msg),
-            caption: messageCaption(msg),
-            fingerprint: contentFingerprint({
+          const allowed = await canDeleteMessages(ctx.api, pair.sourceChatId, msg.from.id);
+          if (!allowed) {
+            logger.debug(
+              { chatId: ctx.chat.id, userId: msg.from.id, sourceChatId: pair.sourceChatId },
+              "relocate skipped: forwarder cannot delete messages in the source chat",
+            );
+          } else {
+            const pending: PendingForward = {
+              targetChatId: ctx.chat.id,
+              targetTopicId: messageTopicId(msg),
+              targetTitle: chatTitle(ctx.chat),
+              targetUsername: chatUsername(ctx.chat),
+              moderatorUserId: msg.from.id,
+              triggerMessageId: msg.message_id,
               text: messageText(msg),
               caption: messageCaption(msg),
-              mediaUniqueIds: mediaUniqueIds(msg),
-            }),
-            origin: readForwardOrigin(msg.forward_origin),
-          };
-          batcher.push(draftKey(ctx.chat.id, msg.from.id), pending);
+              fingerprint: contentFingerprint({
+                text: messageText(msg),
+                caption: messageCaption(msg),
+                mediaUniqueIds: mediaUniqueIds(msg),
+              }),
+              origin: readForwardOrigin(msg.forward_origin),
+            };
+            batcher.push(
+              draftKey(ctx.chat.id, pending.targetTopicId, msg.from.id),
+              pending,
+            );
+          }
         }
       } else if (msg && ctx.chat && msg.from && !msg.from.is_bot) {
         const text = (messageText(msg) ?? "").trim();
         if (text && !text.startsWith("/")) {
-          await drafts.runExclusive(ctx.chat.id, msg.from.id, async () => {
-            const draft = drafts.getByKey(ctx.chat!.id, msg.from!.id);
+          const topicId = messageTopicId(msg);
+          await drafts.runExclusive(ctx.chat.id, topicId, msg.from.id, async () => {
+            const draft = drafts.getByKey(ctx.chat!.id, topicId, msg.from!.id);
             if (!draft || draft.step !== "title") return;
+            if (!(await guardDeletePermission(deps, draft))) return;
             drafts.delete(draft);
             await executeRelocation(deps, draft.plan, {
               promptMessageId: draft.promptMessageId ?? undefined,
@@ -186,7 +208,7 @@ async function acceptBatch(
 ): Promise<void> {
   const head = fresh[0];
   if (!head) return;
-  const open = drafts.getByKey(head.targetChatId, head.moderatorUserId);
+  const open = drafts.getByKey(head.targetChatId, head.targetTopicId, head.moderatorUserId);
   const items = open ? mergeForwards(open.plan.items, fresh) : fresh;
   const matched = await matchRelocation(deps, items);
   if (!matched.ok) {
@@ -224,7 +246,12 @@ async function handleChoice(
 ): Promise<void> {
   const locale = await localeForChat(deps.db, draft.targetChatId);
   if (parsed.action === "attach") {
-    const threads = await listRecentThreads(deps.db, draft.targetChatId, 5);
+    const threads = await listRecentThreads(
+      deps.db,
+      draft.targetChatId,
+      5,
+      draft.plan.targetTopicId,
+    );
     if (threads.length === 0) {
       await ctx.answerCallbackQuery({
         text: withLocale(locale, () => renderNoRecentThreads()),
@@ -245,10 +272,18 @@ async function handleChoice(
   }
   if (parsed.action === "pick") {
     const thread = await findThread(deps.db, parsed.threadId);
-    if (!thread || thread.targetChatId !== draft.targetChatId) {
+    if (
+      !thread ||
+      thread.targetChatId !== draft.targetChatId ||
+      (thread.targetTopicId ?? null) !== draft.plan.targetTopicId
+    ) {
       await ctx.answerCallbackQuery({
         text: withLocale(locale, () => renderThreadUnavailable()),
       });
+      return;
+    }
+    if (!(await guardDeletePermission(deps, draft))) {
+      await ctx.answerCallbackQuery();
       return;
     }
     drafts.delete(draft);
@@ -260,9 +295,17 @@ async function handleChoice(
     return;
   }
   if (parsed.action === "drop") {
+    if (!(await guardDeletePermission(deps, draft))) {
+      await ctx.answerCallbackQuery();
+      return;
+    }
     await ctx.answerCallbackQuery();
     const removed = await discardRelocation(deps, draft.plan, draft.promptMessageId);
     if (removed) drafts.delete(draft);
+    return;
+  }
+  if (!(await guardDeletePermission(deps, draft))) {
+    await ctx.answerCallbackQuery();
     return;
   }
   drafts.delete(draft);
@@ -280,16 +323,42 @@ async function publishDraft(
   const locale = await localeForChat(deps.db, draft.targetChatId);
   const recent =
     draft.step === "pick" && threads.length === 0
-      ? await listRecentThreads(deps.db, draft.targetChatId, 5)
+      ? await listRecentThreads(deps.db, draft.targetChatId, 5, draft.plan.targetTopicId)
       : threads;
   if (draft.step === "pick" && recent.length === 0) draft.step = "confirm";
   const view = withLocale(locale, () => renderDraftPrompt(draft, recent));
   await deletePrompt(deps, draft);
   const sent = await deps.api.sendMessage(draft.targetChatId, view.text, {
     ...HTML_OPTIONS,
+    ...topicParams(draft.plan.targetTopicId),
     reply_markup: view.reply_markup,
   });
   draft.promptMessageId = sent.message_id;
+}
+
+/** Fresh delete-messages check. On denial, tell the moderator and keep the draft. */
+async function guardDeletePermission(
+  deps: RelocateDeps,
+  draft: RelocationDraft,
+): Promise<boolean> {
+  const allowed = await canDeleteMessages(
+    deps.api,
+    draft.plan.pair.sourceChatId,
+    draft.moderatorUserId,
+    { fresh: true },
+  );
+  if (allowed) return true;
+  const locale = await localeForChat(deps.db, draft.targetChatId);
+  try {
+    await deps.api.sendMessage(
+      draft.targetChatId,
+      withLocale(locale, () => renderPermissionDenied()),
+      topicParams(draft.plan.targetTopicId),
+    );
+  } catch (err) {
+    deps.logger.error({ err, chatId: draft.targetChatId }, "failed to send permission notice");
+  }
+  return false;
 }
 
 async function deletePrompt(deps: RelocateDeps, draft: RelocationDraft): Promise<void> {
